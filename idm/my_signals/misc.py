@@ -1,11 +1,17 @@
 # TODO: о господи что за дерьмо
-from idm.objects import dp, MySignalEvent, DB, db_gen
-from idm.api_utils import get_last_th_msgs
-from datetime import datetime, date, timezone, timedelta
-import time, re, requests, os, io, json
-from microvk import VkApi
+import io
+import json
+import re
+import requests
+import time
+from datetime import datetime, timezone, timedelta
 
-@dp.longpoll_event_register('хелп', 'help') #Автор: https://vk.com/id570532674, Доработал: https://vk.com/id194861150
+from idm.utils import find_mention_by_event
+from idm.api_utils import get_last_th_msgs
+from idm.objects import dp, MySignalEvent, db_gen
+
+
+@dp.longpoll_event_register('хелп', 'help')  # Автор: https://vk.com/id570532674, Доработал: https://vk.com/id194861150
 @dp.my_signal_event_register('хелп', 'help')
 def a(event: MySignalEvent) -> str:
     event.msg_op(2, f''' 📗Команды IrCA Duty: vk.com/@ircaduty-comands
@@ -19,6 +25,7 @@ https://vk.com/id194861150
 https://vk.com/id449770994''')
     return "ok"
 
+
 @dp.my_signal_event_register('кража')
 def little_theft(event: MySignalEvent) -> str:
     if not event.args[0].startswith('ав'): return "ok"
@@ -26,15 +33,15 @@ def little_theft(event: MySignalEvent) -> str:
     uid = event.reply_message['from_id']
     if not uid:
         return "ok"
-    image_url = event.api('users.get', fields = 'photo_max_orig',
-        user_ids = uid)[0]['photo_max_orig']
-    image = io.BytesIO(requests.get(url = image_url).content)
+    image_url = event.api('users.get', fields='photo_max_orig',
+                          user_ids=uid)[0]['photo_max_orig']
+    image = io.BytesIO(requests.get(url=image_url).content)
     image.name = 'ava.jpg'
     upload_url = event.api('photos.getOwnerPhotoUploadServer')['upload_url']
-    data = requests.post(upload_url, files = {'photo': image}).json()
-    del(image)
-    post_id = event.api('photos.saveOwnerPhoto', photo = data['photo'],
-        hash = data['hash'], server = data['server'])['post_id']
+    data = requests.post(upload_url, files={'photo': image}).json()
+    del (image)
+    post_id = event.api('photos.saveOwnerPhoto', photo=data['photo'],
+                        hash=data['hash'], server=data['server'])['post_id']
     event.msg_op(1, '😑😑😑', attachment=f'wall{event.db.duty_id}_{post_id}')
     return "ok"
 
@@ -48,11 +55,13 @@ def mention_search(event: MySignalEvent):
         if event.time - msg['date'] >= 86400: break
         if mention in msg['text']:
             msg_ids.append(str(msg['id']))
-    
-    if not msg_ids: msg = 'Ничего не нашел 😟'
-    else: msg = 'Собсна, вот что нашел за последние 24 часа:'
 
-    event.msg_op(1, msg, forward_messages = ','.join(msg_ids))
+    if not msg_ids:
+        msg = 'Ничего не нашел 😟'
+    else:
+        msg = 'Собсна, вот что нашел за последние 24 часа:'
+
+    event.msg_op(1, msg, forward_messages=','.join(msg_ids))
     return "ok"
 
 
@@ -66,7 +75,7 @@ def tosms(event: MySignalEvent):
         if msg[0].get('action'):
             event.msg_op(2, 'Это сообщение - действие, не могу переслать')
         else:
-            event.msg_op(1, 'Вот ента:', forward_messages = msg[0]['id'])
+            event.msg_op(1, 'Вот ента:', forward_messages=msg[0]['id'])
     else:
         event.msg_op(2, '❗ ВК вернул пустой ответ')
     return "ok"
@@ -74,8 +83,9 @@ def tosms(event: MySignalEvent):
 
 @dp.my_signal_event_register('алло')
 def allo(event: MySignalEvent) -> str:
-    event.msg_op(1, 'Че с деньгами?', attachment = 'audio332619272_456239384')
+    event.msg_op(1, 'Че с деньгами?', attachment='audio332619272_456239384')
     return "ok"
+
 
 @dp.longpoll_event_register('рестарт')
 @dp.my_signal_event_register('рестарт')
@@ -88,7 +98,8 @@ def restart(event: MySignalEvent) -> str:
 
 @dp.my_signal_event_register('тест')
 def test(event: MySignalEvent) -> dict:
-    return {"response":"error","error_code":"0","error_message":"Опа, кастомки подвезли"}
+    return {"response": "error", "error_code": "0", "error_message": "Опа, кастомки подвезли"}
+
 
 @dp.longpoll_event_register('время')
 @dp.my_signal_event_register('время')
@@ -128,7 +139,7 @@ def pollcreate(event: MySignalEvent) -> str:
     else:
         warning = ''
     poll = event.api('polls.create', question=" ".join(event.args),
-                 add_answers=json.dumps(answers, ensure_ascii=False))
+                     add_answers=json.dumps(answers, ensure_ascii=False))
     event.msg_op(2, warning, attachment=f"poll{poll['owner_id']}_{poll['id']}")
     return "ok"
 
@@ -150,9 +161,10 @@ def spam(event: MySignalEvent) -> str:
             time.sleep(delay)
     else:
         for i in range(count):
-            event.msg_op(1, f'spamming {i+1}/{count}')
+            event.msg_op(1, f'spamming {i + 1}/{count}')
             time.sleep(delay)
     return "ok"
+
 
 @dp.longpoll_event_register('прочитать')
 @dp.my_signal_event_register('прочитать')
@@ -177,15 +189,18 @@ def readmes(event: MySignalEvent) -> str:
             if conv['peer']['type'] in restricted:
                 continue
             to_read.append(conv['peer']['id'])
-            if conv['peer']['type'] == 'chat': chats += 1
-            elif conv['peer']['type'] == 'user': private += 1
-            elif conv['peer']['type'] == 'group': groups += 1
+            if conv['peer']['type'] == 'chat':
+                chats += 1
+            elif conv['peer']['type'] == 'user':
+                private += 1
+            elif conv['peer']['type'] == 'group':
+                groups += 1
 
     while len(to_read) > 0:
         for _ in range(25 if len(to_read) > 25 else len(to_read)):
             to_execute += code % to_read.pop()
-        event.api.exe(to_execute)
-        time.sleep(0.2)  # TODO: это вообще нужно на PA?
+        event.api.exe(to_execute, event.db.me_token)
+        time.sleep(0.1)  # TODO: это вообще нужно на PA?
         to_execute = ''
 
     message = '✅ Диалоги прочитаны:'
@@ -237,13 +252,14 @@ def repeat(event: MySignalEvent) -> str:
     event.msg_op(1, site)
     return "ok"
 
+
 @dp.longpoll_event_register('статус')
 @dp.my_signal_event_register('статус')
 def status(event: MySignalEvent) -> str:
     status = " ".join(event.args) + ' ' + event.payload
     msg = event.msg_op(1, 'Устанавливаю статус...')
     try:
-        event.api("status.set", text = status)
+        event.api("status.set", text=status)
         event.msg_op(2, 'Статус успешно установлен')
     except:
         event.msg_op(2, 'Ошибка установки статуса')
@@ -259,9 +275,9 @@ def imhere(event: MySignalEvent) -> str:
 @dp.my_signal_event_register('кто')
 def whois(event: MySignalEvent) -> str:
     if event.args == None:
-        event.msg_op(1, 'Кто?', reply_to = event.msg['id'])
+        event.msg_op(1, 'Кто?', reply_to=event.msg['id'])
         return "ok"
-    var = event.api('utils.resolveScreenName', screen_name = event.args[0])
+    var = event.api('utils.resolveScreenName', screen_name=event.args[0])
     type = 'Пользователь' if var['type'] == 'user' else "Группа" if var['type'] == 'group' else "Приложение"
     event.msg_op(1, f"{type}\nID: {var['object_id']}")
     return "ok"
@@ -280,3 +296,48 @@ def zh(event: MySignalEvent) -> str:
         event.api.msg_op(2, event.chat.peer_id, mes, event.msg['id'])
         time.sleep(1)
     return "ok"
+
+
+@dp.longpoll_event_register('стики')
+@dp.my_signal_event_register('стики')
+def stick(event: MySignalEvent):
+    uid = find_mention_by_event(event)
+    if not uid:
+        return "ok"
+
+    if uid < 0:
+        event.msg_op(2, 'У групп нет стикеров!')
+        return "ok"
+
+    url = 'https://api.vk.com/method/gifts.getCatalog?v=5.131&user_id={}&access_token={}'.format(uid, event.db.me_token)
+    stickers = requests.get(url, headers={
+        "user-agent": "VKAndroidApp/1.123-123 (Android 123; SDK 123; IrCA; 1; ru; 123x123)"}).json()
+    stickers = stickers['response']
+
+    url_f = 'https://api.vk.com/method/gifts.getCatalog?v=5.131&user_id=627689528&access_token={}'.format(event.db.me_token)
+    stickers_filter = requests.get(url_f, headers={
+        "user-agent": "VKAndroidApp/1.123-123 (Android 123; SDK 123; IrCA; 1; ru; 123x123)"}).json()
+    stickers_filter = stickers_filter['response'][1]['items'][2:]
+
+    sticker_list = [
+        f"{i['sticker_pack']['title']}"
+        for i in stickers[1]['items']
+        if 'disabled' in i
+    ]
+
+    sum_price_golosa = sum(
+        d['price'] for d in stickers_filter if d['sticker_pack']['title'] in sticker_list)  # цена в голосах
+
+    sum_stick_price_golosa = str(sum_price_golosa)  # цена в голосах
+    sum_stick_price_rub = str(sum_price_golosa * 7)  # цена в рублях
+    count = str(len(sticker_list))  # количество стикер паков
+
+    if count == 0:
+        out_message = ".\n🥺 Платных стикерпаков у пользователя нет."
+        event.msg_op(2, out_message, disable_mentions=1, reply_to=event.msg['id'])
+        return "ok"
+    else:
+        user = event.api('users.get', user_ids=uid)[0]
+        out_message = f'''[id{user['id']}|{user['first_name']} {user['last_name']}]:\n🤑|Стикеров: {count}\n💰|Стоимость: {sum_stick_price_rub}₽ | {sum_stick_price_golosa} голосов\n\n📄|Списочек: {', '.join(sticker_list)}.'''
+        event.msg_op(2, out_message, disable_mentions=1, reply_to=event.msg['id'], keep_forward_messages=1)
+        return "ok"
