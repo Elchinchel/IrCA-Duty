@@ -19,7 +19,7 @@ request_data = {
 def edit(text):
     request_data.update({"message": text})
     r = requests.post('https://api.vk.com/method/messages.edit?'+
-                      'v=5.100&lang=ru&keep_forward_messages=1' +
+                      'v=5.130&lang=ru&keep_forward_messages=1' +
                       '&access_token=' + animdata["token"],
                       data=request_data).json()
     if 'error' in r:
