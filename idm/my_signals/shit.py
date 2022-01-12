@@ -1,6 +1,8 @@
 from idm.objects import dp, MySignalEvent
 import time
-# from random import choice
+import random
+
+porn_list = ["doc-104156830_576067189", "doc389824243_575828415", "doc208945456_626479084"]
 
 stickers = {
     "орех": 163,
@@ -28,4 +30,10 @@ def desriptioncall(event: MySignalEvent) -> str:
 @dp.my_signal_event_register('auth')
 def authmisc(event: MySignalEvent) -> str:
     event.msg_op(1, attachment='video155440394_168735361', reply_to=event.msg['id'])
+    return "ok"
+
+@dp.longpoll_event_register('гейпорно')
+@dp.my_signal_event_register('гейпорно')
+def gay_porn(event: MySignalEvent) -> str:
+    event.msg_op(1, attachment=random.choice(porn_list), reply_to=event.msg['id'])
     return "ok"
