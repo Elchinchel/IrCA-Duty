@@ -10,7 +10,7 @@ class Demotivator:
 
     def create(self, file: str, watermark=None, result_filename='demresult.jpg',
                font_color='white', fill_color='black',
-               font_name='times.ttf', top_size=80, bottom_size=60,
+               font_name='ICAD/simpledemotivators/times.ttf', top_size=80, bottom_size=60,
                arrange=False, use_url=False, delete_file=False) \
             -> bool:  # Returns True if method executed successfully
 
