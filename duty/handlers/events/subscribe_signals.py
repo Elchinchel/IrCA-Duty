@@ -1,9 +1,9 @@
-from duty.objects import dp, Event
+from duty.objects import dp, BaseEvent
 from duty.utils import format_response
 
 
 @dp.event_register('subscribeSignals')
-def subscribe_signals(event: Event) -> str:
+def subscribe_signals(event: BaseEvent) -> str:
     message = format_response(
         event.responses['chat_subscribe'],
         имя=event.chat.name, ид=event.chat.iris_id

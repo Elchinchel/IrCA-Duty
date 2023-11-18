@@ -60,7 +60,7 @@ def voice_create(event: MySignalEvent) -> str:
 @dp.my_signal_event_register('гсы')
 def template_list(event: MySignalEvent) -> str:
     message = get_template_list(event, event.db.voices)
-    event.msg_op(2, format_response(message, 
+    event.msg_op(2, format_response(message,
         name_genitive='голосовых сообщений',
         name_accusative='голосовые сообщения',
         name_accusative_cap='Голосовые сообщения',
@@ -94,7 +94,7 @@ def voice_send(event: MySignalEvent) -> str:
     if voice:
         reply = str(event.reply_message['id']) if event.reply_message else ''
         att = voice['attachments']
-        event.api.exe(
+        event.api.execute(
             'API.messages.delete({' +
             '"message_ids":'+str(event.msg['id'])+',"delete_for_all":1});' +
             'API.messages.send({'

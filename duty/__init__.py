@@ -1,12 +1,22 @@
-from os.path import join, dirname
+from flask import Flask
 
-from .app import app
-from duty.objects import __version__
+import duty.routes.dashboard
+import duty.routes.iris_cb_api
+import duty.routes.datacenter_api
+import duty.routes.longpoll_module_api
+from duty.objects import db
 
-from .iris_listener import __name__
-from .icad_listener import __name__
-from .longpoll_listener import __name__
 
-from .my_signals import __name__
-from .callback_signals import __name__
-from .longpoll_signals import __name__
+def create_app():
+    app = Flask(__name__)
+
+    app.register_blueprint(duty.routes.dashboard.bp)
+    app.register_blueprint(duty.routes.iris_cb_api.bp)
+    app.register_blueprint(duty.routes.datacenter_api.bp)
+    app.register_blueprint(duty.routes.longpoll_module_api.bp)
+
+    @app.teardown_request
+    def sync_db(_):
+        db.sync()
+
+    return app

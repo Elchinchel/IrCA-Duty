@@ -1,7 +1,7 @@
 
-from duty.objects import dp, Event
+from duty.objects import dp, BaseEvent
 
 
 @dp.event_register('forbiddenLinks')
-def forbidden_links(event: Event) -> str:
+def forbidden_links(event: BaseEvent) -> str:
     return "ok"

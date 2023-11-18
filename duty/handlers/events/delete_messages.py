@@ -1,4 +1,4 @@
-from duty.objects import dp, Event
+from duty.objects import dp, BaseEvent
 from duty.utils import ment_user, cmid_key, format_response
 from duty.api_utils import get_msgs
 from datetime import datetime
@@ -47,12 +47,12 @@ def del_info(event):
 
 
 @dp.event_register('deleteMessages')
-def delete_messages(event: Event) -> str:
+def delete_messages(event: BaseEvent) -> str:
     return msg_delete(event, del_info(event))
 
 
 @dp.event_register('deleteMessagesFromUser')
-def delete_messages_from_user(event: Event) -> str:
+def delete_messages_from_user(event: BaseEvent) -> str:
     event.obj['silent'] = False
 
     amount = event.obj.get("amount")
@@ -77,7 +77,7 @@ def delete_messages_from_user(event: Event) -> str:
 
 
 @dp.event_register('messages.deleteByType')
-def delete_by_type(event: Event) -> str:
+def delete_by_type(event: BaseEvent) -> str:
     event.obj['silent'] = False
 
     typ = event.obj['type']

@@ -1,9 +1,9 @@
-from duty.objects import dp, Event, Chat
+from duty.objects import dp, BaseEvent, Chat
 from duty.utils import cmid_key, format_response
 
 
 @dp.event_register('bindChat')
-def bind_chat(event: Event) -> str:
+def bind_chat(event: BaseEvent) -> str:
     search_res = event.api("messages.search",
                            q=event.msg['text'], count=10, extended=1)
     for msg in search_res['items']:

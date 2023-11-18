@@ -1,243 +1,207 @@
 import json
+import time
+
+from typing import Dict, List, Union, get_type_hints
+from logging import getLogger
 from datetime import datetime
-from typing import Dict, List, Union
 
 from flask import Request
 
-from logger import get_writer
-from microvk import VkApi
-
-from .database import db
-from duty.utils import Message, cmid_key
-from duty.api_utils import get_msg
-
-logger = get_writer('События callback')
-
-
-class ExceptToJson(Exception):
-    response: str
-
-    def __init__(self, message='', code: int = 0, iris: bool = False):
-        if iris:
-            self.response = json.dumps({
-                    'response': 'error',
-                    'error_code': code,
-                    'error_message': message
-                }, ensure_ascii=False)
-        else:
-            self.response = 'Error_o4ka:\n' + str(message)
-
-
-class Chat:
-    id: int
-    name: str
-    peer_id: int
-    iris_id: str
-    installed: bool
-
-    def __init__(self, data: dict, iris_id: str):
-        self.peer_id = data['peer_id']
-        self.id = self.peer_id - 2000000000
-        self.name = data.get('name', 'Чат не связан')
-        self.iris_id = iris_id
-        self.installed = data.get('installed', False)
+from duty.vk import VkApi
+from duty.utils import find_mention, find_user_by_link
+from duty.vk.utils import get_msg
+from duty.objects.chat import Chat, RawChat
+from duty.objects.message import Message
+from duty.objects.database import db
+from duty.objects.exceptions import HandlingError, IrisCBAPIError
+from duty.dto.iris import (
+    DeleteMessagesFromUserObject,
+    DeleteMessagesObject,
+    ForbiddenLinksObject,
+    GroupbotsInvitedObject,
+    HireApiObject,
+    IrisCBAPIMessage,
+    IrisCBAPIMethod,
+    AddUserObject,
+    BanExpiredObject,
+    BanGetReasonObject,
+    BindChatObject,
+    MeetChatDutyObject,
+    MessagesDeleteByTypeObject,
+    MessagesRecogniseAudioMessageObject,
+    PrintBookmarkObject,
+    SendMySignalObject,
+    SendSignalObject,
+    SubscribeSignalsObject,
+    ToGroupObject,
+    IrisCBAPIErrorCode
+)
 
 
-class Event:
-    db = db
-    method: str
+logger = getLogger('callback_events')
 
-    api: VkApi
 
-    msg: dict
+def load_iris_cb_api_event(data: dict) -> 'BaseEvent':
+    if data['secret'] != db.secret or data['user_id'] != db.owner_id:
+        raise IrisCBAPIError(IrisCBAPIErrorCode.ERROR_USER_SECRET)
 
-    time: float
-    vk_response_time: float
-    obj: dict
-    secret: str
-    chat: Union[Chat, None]
-    reply_message: dict
-    responses: dict
+    try:
+        method = IrisCBAPIMethod(data['method'])
+    except ValueError:
+        raise IrisCBAPIError(IrisCBAPIErrorCode.ERROR_NO_METHOD_FOUND)
 
-    def set_msg(self, msg: 'dict | None' = None):
+    cls = event_object_map[method]
+    type_hints = get_type_hints(cls)
+    obj_cls = type_hints['obj']
+    should_parse_msg = (type_hints['msg'] is Message)
+    should_bind_chat = (type_hints['chat'] is Chat)
+
+    obj = obj_cls(**data['object'])
+    api = VkApi(db.access_token, raise_excepts=True)
+
+    try:
+        msg = IrisCBAPIMessage(**data['message'])
+    except KeyError:
+        msg = None
+
+    if should_bind_chat:
+        chat = bind_chat(api, obj.chat_id, msg)
+    else:
+        chat = None
+
+    if should_parse_msg:
+        ERR_HEAD = 'Невозможно получить сообщение: '
+
+        if chat is None:
+            raise HandlingError(ERR_HEAD + 'в событии отсутствует чат')
         if msg is None:
-            ct = datetime.now().timestamp()
-            self.msg = get_msg(self.api, self.chat.peer_id, self.msg[cmid_key])
-            self.vk_response_time = datetime.now().timestamp() - ct
-        else:
-            self.msg = msg
-        self.parse()
+            raise HandlingError(ERR_HEAD + 'в событии отсутствует объект сообщения')
+        if msg.conversation_message_id is None:
+            raise HandlingError(ERR_HEAD + 'в событии отсутствует идентификатор сообщения')
 
-    def set_chat(self):
-        if 'chat' not in self.obj.keys():
-            raise ValueError('В событии отсутствует ID чата!')
+        raw_msg = get_msg(api, chat.peer_id, msg.conversation_message_id)
+        if raw_msg is None:
+            raise HandlingError(ERR_HEAD + f'VK не знает о сообщении {msg.conversation_message_id} в чате {chat.peer_id}')
+        msg = Message(raw_msg)
 
-        if self.obj['chat'] in self.db.chats.keys():
-            self.chat = Chat(self.db.chats[self.obj['chat']], self.obj['chat'])
-            return
-
-        if not self.msg:
-            raise RuntimeError('Невозможно связать чат! '
-                               'В событии отсутствует сообщение!')
-
-        if self.msg[cmid_key] is None:
-            raise ExceptToJson(code=10, iris=True)
-
-        ct = datetime.now().timestamp()
-        search_res = self.api("messages.search",
-                              q=self.msg['text'], count=10, extended=1)
-        self.vk_response_time = datetime.now().timestamp() - ct
-
-        message = None
-        for msg in search_res['items']:
-            if msg[cmid_key] == self.msg[cmid_key]:
-                if msg['from_id'] == self.msg['from_id']:
-                    message = msg
-                    break
-        if message is None:
-            raise RuntimeError('Не могу привязать чат! '
-                               'Не нашёл сообщение-команду')
-
-        for conv in search_res['conversations']:
-            if conv['peer']['id'] == message['peer_id']:
-                chat_name = conv['chat_settings']['title']
-                break
-
-        chat_raw = {
-            "peer_id": message['peer_id'],
-            "name": chat_name,  # type: ignore
-            "installed": False
-        }
-        self.db.chats.update({self.obj['chat']: chat_raw})
-        self.chat = Chat(chat_raw, self.obj['chat'])
-        self.set_msg(message)
+    event = cls(api, obj, chat, msg)
+    return event
 
 
-    def __init__(self, request: Request):
-        if request.data == b'':
-            self.user_id = None
-            self.msg = None
-            self.obj = None
-            self.secret = None
-            self.method = 'ping'
-        else:
-            _data = json.loads(request.data)
-            self.secret = _data.get('secret')
-            self.obj = _data.get('object', {})
-            self.msg = _data.get('message', {})
+def bind_chat(api: VkApi, chat_id: str, msg: 'IrisCBAPIMessage | None'):
+    if chat_id in db.chats:
+        return Chat(db.chats[chat_id], chat_id)
 
-            if int(_data.get('user_id')) != db.owner_id:
-                raise ExceptToJson('Неверный ID дежурного')
+    if msg is None:
+        raise IrisCBAPIError(IrisCBAPIErrorCode.ERROR_NO_CHAT)
 
-            self.time = datetime.now().timestamp()
-            self.api = VkApi(self.db.access_token, raise_excepts=True)
-            self.method = _data.get('method', 'ping')
-            self.responses = self.db.responses
+    search_res = api.messages.search(q=msg.text, count=10, extended=1)
+    event_message = _search_message(msg, search_res)
+    chat_name = _search_conv_name(
+        event_message['peer_id'], search_res['conversations']
+    )
 
-            if self.method in {'sendSignal', 'sendMySignal',
-                               'subscribeSignals', 'toGroup'}:
-                self.set_chat()
-            elif self.method in {'ping', 'groupbots.invited',
-                                 'bindChat', 'meetChatDuty'}:
-                pass
-            else:
-                chat = self.obj['chat']
-                if chat not in self.db.chats:
-                    raise ExceptToJson(f'Чат #{chat} не связан!')
-                self.chat = Chat(self.db.chats[chat], chat)
-        if self.method not in {'sendSignal', 'sendMySignal'}:
-            logger.info(self.__str__())
+    db.chats[chat_id] = RawChat(
+        peer_id=event_message['peer_id'],
+        name=chat_name,
+        installed=False
+    )
+    return Chat(db.chats[chat_id], chat_id)
+
+
+def _search_message(target: IrisCBAPIMessage, messages):
+    for msg in messages:
+        if msg['conversation_message_id'] == target.conversation_message_id:
+            if msg['from_id'] == target.from_id:  # XXX: message.date?
+                return msg
+    logger.error('Не удалось найти сообщение-команду для привязки чата')
+    raise IrisCBAPIError(IrisCBAPIErrorCode.ERROR_CANT_BIND_CHAT)
+
+
+def _search_conv_name(peer_id: int, conversations) -> str:
+    for conv in conversations:
+        if conv['peer']['id'] == peer_id:
+            return conv['chat_settings']['title']
+    raise HandlingError('VK проигнорировал просьбу прислать чаты с результатами поиска')
+
+
+# if self.method in {'sendSignal', 'sendMySignal',
+#                    'subscribeSignals', 'toGroup'}:
+#     self.set_chat()
+# elif self.method in {'ping', 'groupbots.invited',
+#                      'bindChat', 'meetChatDuty'}:
+#     pass
+# else:
+#     chat = self.obj['chat']
+#     if chat not in self.db.chats:
+#         raise ExceptToJson(f'Чат #{chat} не связан!')
+#     self.chat = Chat(self.db.chats[chat], chat)
+
+
+class BaseEvent:
+    api: VkApi
+    time: datetime
+
+    def __init__(self, api, obj, chat, msg):
+        self.api = api
+        self.obj = obj
+        self.msg = msg
+        self.chat = chat
+        self.time = datetime.now()
 
     def send(self, text='', **kwargs) -> int:
         if self.chat is None:
-            raise RuntimeError(
-                'Невозможно отправить соообщение, т.к. чат не установлен'
-            )
-        return self.api.msg_op(1, self.chat.peer_id, text, **kwargs)
+            raise RuntimeError('Чат неизвестен')
+        return self.api.send_msg(text, self.chat.peer_id, **kwargs)
 
     def edit_msg(self, message_id: int, text='', **kwargs):
         if self.chat is None:
-            raise RuntimeError(
-                'Невозможно отредактировать соообщение, т.к. чат не установлен'
-            )
-        return self.api.msg_op(2, self.chat.peer_id, text, message_id, **kwargs)
-
-    def parse(self):
-        msg = Message(self.msg)
-        self.reply_message = self.msg.get("reply_message", None)
-        self.attachments = msg.attachments
-        self.command = msg.command
-        self.payload = msg.payload
-        self.args = msg.args
-
-    def __str__(self) -> str:
-        obj_ = self.obj
-        return f"""Новое событие от Iris callback API
-            Метод: {self.method}
-            Данные: {obj_}
-            Сообщение: {self.msg}
-            """.replace("    ", "")
+            raise RuntimeError('Чат неизвестен')
+        return self.api.edit_msg(text, self.chat.peer_id, message_id, **kwargs)
 
 
-class SignalEvent(Event):
-    command: str
-    args: list
-    payload: str
-    attachments: List[str]
-
-    def __init__(self, event: Event):
-        self.time = event.time
-        self.api = event.api
-        self.db = event.db
-        self.method = event.method
-        self.obj = event.obj
-        self.msg = event.msg
-        self.secret = event.secret
-        self.chat = event.chat
-        self.responses = event.responses
-
-        logger.debug(self.__str__())
+class MessageEventType(BaseEvent):
+    msg: Message
 
 
-class MySignalEvent(Event):
-    command: str
-    args: List[str]
-    payload: str
-    attachments: List[str]
+class SignalEvent(BaseEvent):
+    msg: Message
+    obj: SendSignalObject
 
-    def __init__(self, event: Event):
-        self.api = event.api
-        self.time = event.time
-        self.db = event.db
-        self.method = event.method
-        self.obj = event.obj
-        self.msg = event.msg
-        self.secret = event.secret
-        self.chat = event.chat
-        self.responses = event.responses
 
-        logger.debug(self.__str__())
-
-    def msg_op(self, mode, text:str='', **kwargs):
-        '1 - новое сообщение, 2 - редактирование, 3 - удаление для всех'
-        msg_id = self.msg['id'] if mode in {2, 3, 4} else 0
-        self.api.msg_op(mode, self.chat.peer_id, text.replace('&amp;', '&').replace('&quot;', '&').replace('&lt;', '<').replace('&gt;', '>'), msg_id, **kwargs)
+class MyMessageMixin:
+    api: VkApi
+    msg: Message
 
     def send(self, message: str = '', **params) -> int:
         'Отправка в чат, из которого пришло событие, нового сообщения'
-        return self.msg_op(1, message, **params)
+        return self.api.send_msg(message, self.msg.peer_id, **params)
 
     def edit(self, message: str = '', **params) -> int:
         'Редактирование сообщения-события'
-        return self.msg_op(2, message, **params)
+        return self.api.edit_msg(message, self.msg.peer_id, self.msg.id, **params)
 
-    def delete(self) -> Dict[str, int]:
+    def delete(self, for_all: bool = True) -> Dict[str, int]:
         'Удаление сообщения-события'
-        return self.msg_op(3)
+        return self.api.delete_msg(self.msg.id, for_all)
+
+    def find_mention(self) -> Union[int, None]:
+        'Возвращает ID пользователя, если он есть в сообщении, иначе None'
+        user_id = find_mention(' '.join(self.msg.args))
+        if not user_id and self.msg.reply_message:
+            user_id = self.msg.reply_message['from_id']
+        if not user_id:
+            user_id = find_user_by_link(self.msg.text, self.api)
+        if not user_id and self.msg.fwd:
+            user_id = self.msg.fwd[0]['from_id']
+        return user_id
 
 
-class LongpollEvent(MySignalEvent):
-    method = 'Longpoll'
+class MySignalEvent(BaseEvent, MyMessageMixin):
+    obj: SendMySignalObject
+
+
+class LongpollEvent(BaseEvent, MyMessageMixin):
     data: dict
 
     def __str__(self) -> str:
@@ -262,3 +226,107 @@ class LongpollEvent(MySignalEvent):
         self.responses = self.db.responses
 
         logger.debug(self.__str__())
+
+
+class AddUserEvent(BaseEvent):
+    msg: None
+    obj: AddUserObject
+
+
+class BanExpiredEvent(BaseEvent):
+    msg: None
+    obj: BanExpiredObject
+
+
+class BanGetReasonEvent(BaseEvent):
+    msg: Message
+    obj: BanGetReasonObject
+
+
+class BindChatEvent(BaseEvent):
+    msg: Message
+    obj: BindChatObject
+
+
+class DeleteMessagesFromUserEvent(BaseEvent):
+    msg: Message
+    obj: DeleteMessagesFromUserObject
+
+
+class DeleteMessagesEvent(BaseEvent):
+    msg: None
+    obj: DeleteMessagesObject
+
+
+class ForbiddenLinksEvent(BaseEvent):
+    msg: None
+    obj: ForbiddenLinksObject
+
+
+class PingEvent(BaseEvent):
+    msg: None
+    obj: None
+    chat: None
+
+
+class PrintBookmarkEvent(BaseEvent):
+    msg: Message
+    obj: PrintBookmarkObject
+
+
+class SubscribeSignalsEvent(BaseEvent):
+    msg: Message
+    obj: SubscribeSignalsObject
+
+
+class ToGroupEvent(BaseEvent):
+    msg: Message
+    obj: ToGroupObject
+
+
+class HireApiEvent(BaseEvent):
+    msg: Message
+    obj: HireApiObject
+
+
+class MeetChatDutyEvent(BaseEvent):
+    msg: None
+    obj: MeetChatDutyObject
+
+
+class MessagesDeleteByTypeEvent(BaseEvent):
+    msg: None
+    obj: MessagesDeleteByTypeObject
+
+
+class GroupbotsInvitedEvent(BaseEvent):
+    msg: None
+    obj: GroupbotsInvitedObject
+
+
+class MessagesRecogniseAudioMessageEvent(BaseEvent):
+    msg: None
+    obj: MessagesRecogniseAudioMessageObject
+
+
+# 'dict[IrisCBAPIMethod, IrisCBAPIEvent]'
+event_object_map = {
+    IrisCBAPIMethod.ADD_USER: AddUserEvent,
+    IrisCBAPIMethod.BAN_EXPIRED: BanExpiredEvent,
+    IrisCBAPIMethod.BAN_GET_REASON: BanGetReasonEvent,
+    IrisCBAPIMethod.BIND_CHAT: BindChatEvent,
+    IrisCBAPIMethod.DELETE_MESSAGES_FROM_USER: DeleteMessagesFromUserEvent,
+    IrisCBAPIMethod.DELETE_MESSAGES: DeleteMessagesEvent,
+    IrisCBAPIMethod.FORBIDDEN_LINKS: ForbiddenLinksEvent,
+    IrisCBAPIMethod.PING: PingEvent,
+    IrisCBAPIMethod.PRINT_BOOKMARK: PrintBookmarkEvent,
+    IrisCBAPIMethod.SUBSCRIBE_SIGNALS: SubscribeSignalsEvent,
+    IrisCBAPIMethod.TO_GROUP: ToGroupEvent,
+    IrisCBAPIMethod.SEND_SIGNAL: SignalEvent,
+    IrisCBAPIMethod.SEND_MY_SIGNAL: MySignalEvent,
+    IrisCBAPIMethod.HIRE_API: HireApiEvent,
+    IrisCBAPIMethod.MEET_CHAT_DUTY: MeetChatDutyEvent,
+    IrisCBAPIMethod.MESSAGES_DELETE_BY_TYPE: MessagesDeleteByTypeEvent,
+    IrisCBAPIMethod.GROUPBOTS_INVITED: GroupbotsInvitedEvent,
+    IrisCBAPIMethod.MESSAGES_RECOGNISE_AUDIO_MESSAGE: MessagesRecogniseAudioMessageEvent,
+}

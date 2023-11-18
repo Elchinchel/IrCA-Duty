@@ -35,7 +35,7 @@ def ignore_list(event: LongpollEvent):
     else:
         message = message_u + '\n' + message_g
 
-    event.api.exe("""API.messages.send({"peer_id":%d,"message":"%s",
+    event.api.execute("""API.messages.send({"peer_id":%d,"message":"%s",
                                         "random_id":0,"disable_mentions":1});
         API.messages.delete({"message_ids":%d,"delete_for_all":1});""" % (
             event.chat.peer_id, message.replace('\n', '<br>'), event.msg['id']

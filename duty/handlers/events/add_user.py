@@ -1,9 +1,9 @@
-from duty.objects import dp, Event
+from duty.objects import dp, BaseEvent
 from duty.utils import ment_user, format_response
-from microvk import VkApiResponseException
+from duty.vk import VkApiResponseException
 
 
-def user_add(event: Event, typ: str):
+def user_add(event: BaseEvent, typ: str):
     user = event.api('users.get', user_ids=event.obj['user_id'])[0]
 
 
@@ -47,10 +47,10 @@ def user_add(event: Event, typ: str):
 
 
 @dp.event_register('addUser')
-def add_user(event: Event) -> str:
+def add_user(event: BaseEvent) -> str:
     return user_add(event, 'user_ret_process')
 
 
 @dp.event_register('banExpired')
-def ban_expired(event: Event) -> str:
+def ban_expired(event: BaseEvent) -> str:
     return user_add(event, 'user_ret_ban_expired')

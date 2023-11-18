@@ -1,7 +1,7 @@
 from datetime import datetime
 from time import sleep
 from duty.utils import find_mention_by_event
-from microvk import VkApiResponseException
+from duty.vk import VkApiResponseException
 from duty.objects import MySignalEvent, dp
 
 

@@ -1,12 +1,9 @@
 from typing import Any
+from logging import getLogger
 
 import requests
 
-from logger import get_writer
-
-from .methods import Messages
-
-logger = get_writer('VK API')
+logger = getLogger('VK API')
 
 
 class VkApiResponseException(Exception):
@@ -26,8 +23,6 @@ class VkApi:
     url: str = 'https://api.vk.com/method/'
     query: str
     raise_excepts: bool
-
-    messages = Messages
 
     def __init__(self, access_token: str, raise_excepts: bool = False, version: str = "5.110"):
         'raise_excepts - если True, ошибки ВК будут вызывать исключения'
@@ -50,33 +45,41 @@ class VkApi:
         elif self.raise_excepts:
             raise Exception('networkerror')
 
-    def method(self, method, **kwargs):
-        return self.__call__(method, **kwargs)
-
-    def message_send(self, message: str, peer_id: int, **kwargs):
-        return self.msg_op(1, peer_id, message, **kwargs)
-
-    def msg_op(self, mode: int, peer_id: int = 0, message = '', msg_id = '', **kwargs):
-        '''mode: 1 - отправка, 2 - редактирование, 3 - удаление, 4 - удаление только для себя'''
-
-        if mode == 4:
-            mode = 3
-            dfa = 0
-        else: dfa = 1
-
-        method = ['messages.send', 'messages.edit', 'messages.delete'][mode - 1]
-
-        return self(
-            method,
-            peer_id=peer_id,
+    def send_msg(self, message: str, peer_id: int, **kwargs):
+        return self.messages.send(
             message=message,
-            message_id=msg_id,
-            delete_for_all=dfa,
+            peer_id=peer_id,
             random_id=0,
             **kwargs
         )
 
-    def exe(self, code, token: 'str | None' = None):
-        if token:
-            return VkApi(token)('execute', code = code)
-        return self('execute', code = code)
+    def edit_msg(self, message: str, peer_id: int, message_id: int, **kwargs):
+        return self.messages.edit(
+            message=message,
+            peer_id=peer_id,
+            message_id=message_id,
+            **kwargs
+        )
+
+    def delete_msg(self, message_id: int, for_all: bool):
+        return self.messages.delete(
+            message_id=message_id,
+            delete_for_all=for_all
+        )
+
+    def execute(self, code):
+        return self('execute', code=code)
+
+    def __getattr__(self, __name: str):
+        return MethodGroup(self, __name)
+
+
+class MethodGroup:
+    def __init__(self, api: VkApi, name: str) -> None:
+        self._api = api
+        self._group = name
+
+    def __getattr__(self, __name: str):
+        def api_call(**kwargs):
+            return self._api(f'{self._group}.{__name}', **kwargs)
+        return api_call

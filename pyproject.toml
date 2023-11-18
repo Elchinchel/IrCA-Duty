@@ -1,0 +1,6 @@
+[tool.isort]
+src_paths = ["duty", "test"]
+length_sort = true
+multi_line_output = 3
+lines_after_imports = 2
+known_third_party = []

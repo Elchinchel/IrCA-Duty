@@ -4,7 +4,7 @@ from duty.objects import dp, MySignalEvent, db
 from duty.utils import find_mention_by_event, get_plural, cmid_key
 from typing import Union
 import requests
-from microvk import VkApi
+from duty.vk import VkApi
 from flask import  request
 
 

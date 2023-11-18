@@ -1,9 +1,9 @@
 # TODO: навести красоту
 import typing
 from duty.api_utils import get_msg
-from duty.objects import dp, Event, SignalEvent
+from duty.objects import dp, BaseEvent, SignalEvent
 from duty.utils import cmid_key
-from microvk import VkApiResponseException
+from duty.vk import VkApiResponseException
 import re
 import time
 import requests
@@ -11,7 +11,7 @@ from io import BytesIO
 from datetime import datetime, timezone, timedelta
 
 
-def upload_photo(event: Event, url: str) -> str:
+def upload_photo(event: BaseEvent, url: str) -> str:
     time.sleep(0.6)
     server = event.api("photos.getWallUploadServer", group_id=event.obj['group_id'])
     im = BytesIO()
@@ -46,7 +46,7 @@ def parse_message(event: SignalEvent, payload: str) -> typing.Tuple[str, typing.
     return payload, attachments
 
 
-def get_usernames(event: Event, ids):
+def get_usernames(event: BaseEvent, ids):
     users = {}
     for user in event.api('users.get', user_ids=','.join([str(i) for i in ids])):
         users[user['id']] = f'[id{user["id"]}|{user["first_name"]} {user["last_name"]}]'
@@ -70,7 +70,7 @@ def get_delay(text):
 
 
 @dp.event_register('toGroup')
-def to_group(event: Event) -> str:
+def to_group(event: BaseEvent) -> str:
     event.set_msg()
     arg_line, _, payload = event.msg['text'].partition('\n')
     args = arg_line.split()

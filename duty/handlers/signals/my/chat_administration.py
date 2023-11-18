@@ -1,7 +1,7 @@
 import requests, io
 from duty.utils import get_index, find_mention_by_event
 from duty.objects import dp, MySignalEvent
-from microvk import VkApiResponseException
+from duty.vk import VkApiResponseException
 
 # code from:
 # vk: http://vk.com/id194861150

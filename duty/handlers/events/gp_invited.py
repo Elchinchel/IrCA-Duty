@@ -1,6 +1,6 @@
-from duty.objects import dp, Event
+from duty.objects import dp, BaseEvent
 from duty.utils import cmid_key
-from microvk import VkApiResponseException
+from duty.vk import VkApiResponseException
 from time import sleep
 
 
@@ -12,7 +12,7 @@ FAILED_MSG = (
 
 
 @dp.event_register('groupbots.invited')
-def groupbot(event: Event):
+def groupbot(event: BaseEvent):
     group_id = 0 - int(event.obj['group_id'])
     for item in event.api("messages.getConversations",
                           count=100, filter="all")['items']:

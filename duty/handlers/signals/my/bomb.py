@@ -61,7 +61,7 @@ def bomb(event: MySignalEvent):
             event.msg_op(2, '❗ Ну и че мне отправить?')
             return "ok"
     text = text.replace("\n", "<br>")
-    event.api.exe('return API.messages.send({'+
+    event.api.execute('return API.messages.send({'+
         f'peer_id:{event.chat.peer_id},'+
         f'message:"{escape(text)}",'+
         f'expire_ttl:{time},'+

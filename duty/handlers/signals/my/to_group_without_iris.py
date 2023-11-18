@@ -6,8 +6,8 @@ import time
 from io import BytesIO
 from datetime import datetime, timezone, timedelta
 import typing
-from duty.utils import cmid_key, find_user_mention
-from microvk import VkApi, VkApiResponseException
+from duty.utils import cmid_key, find_mention
+from duty.vk import VkApi, VkApiResponseException
 
 
 def upload_photo(event: MySignalEvent, url: str) -> str:
@@ -94,7 +94,7 @@ def find_user_by_link(text: str, vk: VkApi) -> typing.Union[int, None]:
 def get_group_id(event: MySignalEvent) -> typing.Union[int, None]:
     user_id = None
     if event.args:
-        user_id = find_user_mention(event.args[0])
+        user_id = find_mention(event.args[0])
     if event.reply_message and not user_id:
         user_id = event.reply_message['from_id']
     if not user_id:

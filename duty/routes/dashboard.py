@@ -3,30 +3,32 @@ import time
 import json
 import traceback
 
+from os import environ
+from typing import List, Union
+from hashlib import md5
+from logging import getLogger
+
 from requests import Session
 from urllib.parse import urlencode
 
-from os import environ
-from hashlib import md5
-from typing import List, Union
+from flask import (
+    Response,
+    Blueprint,
+    request,
+    redirect,
+    make_response,
+    render_template,
+    send_from_directory,
+)
 
-from flask import (Flask, make_response, redirect, render_template,
-                   request, send_from_directory, Response)
+from duty.vk import VkApi, VkApiResponseException
 
 from duty.utils import gen_secret
-from microvk import VkApi, VkApiResponseException
-from logger import get_writer
-
 from duty.objects import db
 
 
-DEBUG = (environ.get('FLASK_ENV') == 'development')
-
-app = Flask(__name__)
-
-logger = get_writer('Веб-приложение')
-
-me_data = {}
+bp = Blueprint('dashboard', __name__)
+logger = getLogger('dashboard')
 
 
 class ReturnResponse(Exception):
@@ -104,14 +106,14 @@ def check_tokens(tokens: list):
     return user_ids
 
 
-@app.route('/')
+@bp.route('/')
 def index():
     if db.installed:
         return redirect('/admin')
     return redirect('/install')
 
 
-@app.route('/auth', methods=["POST"])
+@bp.route('/auth', methods=["POST"])
 def do_auth():
     user_id = check_tokens(format_tokens([request.form.get('access_token')]))
     if type(user_id) != list:
@@ -129,19 +131,19 @@ def do_auth():
     return response, 302
 
 
-@app.route('/favicon.ico')
+@bp.route('/favicon.ico')
 def favicon():
     return send_from_directory('static/img', 'favicon.png')
 
 
-@app.route('/install')
+@bp.route('/install')
 def install():
     if db.installed:
         return redirect('/')
     return render_template('pages/install.html')
 
 
-@app.route('/api/setup_cb', methods=["POST"])
+@bp.route('/api/setup_cb', methods=["POST"])
 def setup():
     if db.installed:
         return redirect('/')
@@ -169,7 +171,7 @@ def setup():
     return do_auth()
 
 
-@app.route('/api/<string:method>', methods=["POST"])
+@bp.route('/api/<string:method>', methods=["POST"])
 def api(method: str):
     login_check(request)
     handler = globals().get(f'app_method_{method}', lambda: None)
@@ -299,7 +301,7 @@ def app_method_delete_anim():
             return redirect('/admin#DynTemplates')
 
 
-@app.route('/admin')
+@bp.route('/admin')
 def admin():
     login_check(request)
 
@@ -345,41 +347,41 @@ def admin():
     )
 
 
-@app.route('/login')
+@bp.route('/login')
 def login():
     if not db.installed:
         return redirect('/')
     return render_template('pages/login.html')
 
 
-@app.errorhandler(404)
+@bp.errorhandler(404)
 def page_not_found(_):
     return render_template('errors/404.html'), 404
 
 
-@app.errorhandler(405)
+@bp.errorhandler(405)
 def method_not_allowed(_):
     return render_template('errors/404.html'), 405
 
 
-@app.errorhandler(500)
+@bp.errorhandler(500)
 def int_error(e):
     return render_template('errors/500.html', error=e), 500
 
 
-@app.errorhandler(ReturnResponse)
+@bp.errorhandler(ReturnResponse)
 def oops(e: ReturnResponse):
     return e.response
 
 
-@app.errorhandler(Exception)
+@bp.errorhandler(Exception)
 def on_error(e: Exception):
     logger.error(f'Ошибка при обработке запроса:\n' +
                  traceback.format_exc())
     return f'Неизвестная ошибка:\n{e.__class__.__name__}: {e}'
 
 
-@app.errorhandler(json.decoder.JSONDecodeError)
+@bp.errorhandler(json.decoder.JSONDecodeError)
 def decode_error(e):
     logger.error(f'Ошибка при декодировании данных:\n{e}\n{traceback.format_exc()}')  # noqa
     return ('Произошла ошибка при декодировании JSON (скорее всего в файлах '

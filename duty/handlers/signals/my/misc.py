@@ -204,7 +204,7 @@ def readmes(event: MySignalEvent) -> str:
     while len(to_read) > 0:
         for _ in range(25 if len(to_read) > 25 else len(to_read)):
             to_execute += code % to_read.pop()
-        event.api.exe(to_execute, event.db.me_token)
+        event.api.execute(to_execute, event.db.me_token)
         time.sleep(0.1)  # TODO: это вообще нужно на PA?
         to_execute = ''
 

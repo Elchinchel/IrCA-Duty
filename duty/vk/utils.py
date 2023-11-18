@@ -1,10 +1,10 @@
-from microvk import VkApi, VkApiResponseException
+from duty.vk import VkApi, VkApiResponseException
 from typing import List,Union
 import requests
 
 
 def get_last_th_msgs(peer_id: int, api: VkApi) -> List[dict]:
-    return api.exe('''return (API.messages.getHistory({"peer_id":"%(peer)s",
+    return api.execute('''return (API.messages.getHistory({"peer_id":"%(peer)s",
     "count":"200", "offset":0}).items) + (API.messages.getHistory({"peer_id":
     "%(peer)s", "count":"200", "offset":200}).items) + (API.messages.getHistory({"peer_id":
     "%(peer)s", "count":"200", "offset":400}).items) + (API.messages.getHistory({"peer_id":
@@ -13,7 +13,7 @@ def get_last_th_msgs(peer_id: int, api: VkApi) -> List[dict]:
 
 
 def get_msgs(peer_id, api: VkApi, offset = 0):
-    return api.exe('''return (API.messages.getHistory({"peer_id":"%s",
+    return api.execute('''return (API.messages.getHistory({"peer_id":"%s",
     "count":"200", "offset":"%s"}).items) + (API.messages.getHistory({"peer_id":
     "%s", "count":"200", "offset":"%s"}).items);''' %
     (peer_id, offset, peer_id, offset + 200))

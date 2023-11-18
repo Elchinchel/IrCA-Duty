@@ -1,10 +1,10 @@
-from duty.objects import dp, Event
+from duty.objects import dp, BaseEvent
 import time
 # code from:
 # vk: http://vk.com/id194861150
 # github: https://github.com/Alex1249
 @dp.event_register('messages.recogniseAudioMessage')
-def messages_recognise_Audio_Message(event: Event) -> str:
+def messages_recognise_Audio_Message(event: BaseEvent) -> str:
     count=0
     while True:
         try:

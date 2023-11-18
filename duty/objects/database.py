@@ -165,21 +165,10 @@ class DB(_StandardDefaults):
         return "ok"
 
 
-def _update():
-    # кто до сих пор не обновился с версии июля 2020 года -
-    # - не обновляйтесь нахуй, сидите со своим IDM SC mod
-    gen = read('database/general.json')
-    usr = read(f'database/{gen["owner_id"]}.json')
-    write('database.json', dict(gen, **usr))
-
-
 try:
     read('database.json')
 except (FileNotFoundError, json.JSONDecodeError):
     write('database.json', {})
-    try:
-        _update()
-    except Exception:
-        pass
+
 
 db = DB()  # один пользователь, один поток, один экземпляр, мне стабильно до пизды

@@ -1,21 +1,44 @@
-from duty.objects import LongpollEvent, db, dp
-from microvk import VkApi
-from duty.utils import gen_secret
-from logger import get_writer
-from .app import app
-from flask import request
-import traceback
 import json
+import time
+from functools import wraps
 
+from flask import Blueprint, g, request
+from logger import get_writer
+from werkzeug.exceptions import BadRequest
+
+from duty.vk import VkApi
+from duty.utils import gen_secret, set_json_g_data
+from duty.objects import LongpollEvent, db, dp
+
+
+bp = Blueprint('longpoll_module', __name__)
 logger = get_writer('Приемник сигналов LP модуля')
 
 
-@app.route('/ping', methods=["POST"])
+class error:
+    AuthFail = 0
+
+
+def ensure_request_authorized(func):
+    @wraps(func)
+    @set_json_g_data
+    def decorator(*args, **kwargs):
+        if g.data['access_key'] != db.lp_settings['key']:
+            time.sleep(0.1)
+            raise BadRequest('Invalid access key')
+        return func(*args, **kwargs)
+
+    return decorator
+
+
+@bp.post('/ping')  # XXX: deprecated
+@bp.get('/ping')
 def ping():
     return "ok"
 
 
-@app.route('/longpoll/event', methods=["POST"])
+@bp.post('/longpoll/event')
+@ensure_request_authorized
 def longpoll():
     event = LongpollEvent(request.json)
 
@@ -29,11 +52,8 @@ def longpoll():
     return json.dumps({"response": "ok"}, ensure_ascii=False)
 
 
-class error:
-    AuthFail = 0
-
-
-@app.route('/longpoll/start', methods=["POST"])
+@bp.post('/longpoll/start')
+@ensure_request_authorized
 def get_data():
     token = json.loads(request.data)['token']
 
@@ -46,20 +66,15 @@ def get_data():
     db.lp_settings['key'] = gen_secret(length=20)
     db.sync()
     return json.dumps({
-            'chats': db.chats,
-            'deleter': db.responses['del_self'],
-            'settings': db.lp_settings,
-            'self_id': db.owner_id
-        })
+        'chats': db.chats,
+        'deleter': db.responses['del_self'],
+        'settings': db.lp_settings,
+        'self_id': db.owner_id
+    })
 
 
-@app.route('/longpoll/sync', methods=["POST"])
+@bp.route('/longpoll/sync', methods=["POST"])
+@ensure_request_authorized
 def sync_settings():
-    data = request.json
-
-    if data['access_key'] != db.lp_settings['key']:
-        return "?"
-
-    db.lp_settings.update(data['settings'])
-    db.sync()
+    db.lp_settings.update(g.data['settings'])
     return "ok"

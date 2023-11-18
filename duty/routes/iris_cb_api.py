@@ -1,22 +1,50 @@
-from duty.objects import Event, ExceptToJson, dp
-from microvk import VkApiResponseException
-from logger import get_writer
-from .app import app, DEBUG
-from flask import request
 import json
+from logging import getLogger
 
-logger = get_writer('IRIS Callback')
+from flask import Response, Blueprint, g, request, current_app
+from flask.blueprints import BlueprintSetupState
+from werkzeug.exceptions import InternalServerError
+
+from duty.vk import VkApiResponseException
+from duty.utils import DEV_ENV, set_json_g_data
+from duty.dto.iris import IrisCBAPIErrorCode
+from duty.handlers import find_and_join_dispatchers
+from duty.objects.events import load_iris_cb_api_event
+from duty.objects.database import db
+from duty.objects.dispatcher import IrisCBAPIDispatcher
+from duty.objects.exceptions import HandlingError, IrisCBAPIError
 
 
-@app.route('/callback', methods=["POST"])
+bp = Blueprint('iris_callback', __name__)
+logger = getLogger(__name__)
+
+
+class ExceptToJson(Exception):
+    response: str
+
+    def __init__(self, message='', code: int = 0, iris: bool = False):
+        if iris:
+            self.response = json.dumps({
+                    'response': 'error',
+                    'error_code': code,
+                    'error_message': message
+                }, ensure_ascii=False)
+        else:
+            self.response = 'Error_o4ka:\n' + str(message)
+
+
+@bp.post('/callback')
+@set_json_g_data
 def callback():
-    event = Event(request)
+    dispatcher = find_and_join_dispatchers(IrisCBAPIDispatcher)
+    if not DEV_ENV and g.data['secret'] != db.secret:
+        raise IrisCBAPIError(IrisCBAPIErrorCode.ERROR_USER_SECRET)
 
-    if event.secret != event.db.secret and not DEBUG:
-        return 'Неверная секретка', 500
+    event = load_iris_cb_api_event(g.data)
 
-    d = dp.event_run(event)
-    event.db.sync()
+    result = dispatcher.handle_event(event)
+    return repr(result)
+
     if d is None:
         d = "ok"
     if d == "ok":
@@ -27,12 +55,12 @@ def callback():
         return r"\\\\\ашипка хэз бин произошла/////" + '\n' + d
 
 
-@app.errorhandler(ExceptToJson)
+@bp.errorhandler(ExceptToJson)
 def json_error(e):
     return e.response
 
 
-@app.errorhandler(VkApiResponseException)
+@bp.errorhandler(VkApiResponseException)
 def vk_error(e: VkApiResponseException):
     return json.dumps({
         "response": "vk_error",

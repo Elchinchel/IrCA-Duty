@@ -1,8 +1,13 @@
-try:
-    from ._version import __version__
-except ImportError:
-    __version__ = '__неизвестно__'
+__version__ = '__неизвестно__z'
 
-from .events import *
-from . import dispatcher as dp
-from .database import db
+
+from duty.objects import dispatcher as dp
+from duty.objects.chat import Chat
+from duty.objects.message import Message
+from duty.objects.database import db
+from duty.objects.events import (
+    BaseEvent,
+    SignalEvent,
+    MySignalEvent,
+    LongpollEvent
+)

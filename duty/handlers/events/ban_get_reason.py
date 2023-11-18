@@ -1,9 +1,9 @@
-from duty.objects import dp, Event
+from duty.objects import dp, BaseEvent
 from duty.api_utils import get_msg_id
 
 
 @dp.event_register('banGetReason')
-def ban_get_reason(event: Event) -> str:
+def ban_get_reason(event: BaseEvent) -> str:
     reply = {}
     if event.obj['local_id'] != 0:
         reply['reply_to'] = get_msg_id(

@@ -17,7 +17,7 @@ def delete_self_message(event: MySignalEvent) -> str:
     if not event.db.settings['silent_deleting']:
         event.msg_op(2, event.responses['del_self'])
 
-    event.api.exe("""
+    event.api.execute("""
     var i = 0;
     var msg_ids = {};
     var tn = %s;

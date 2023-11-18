@@ -1,6 +1,6 @@
 from duty.objects import dp, MySignalEvent
 from duty.utils import find_mention_by_event
-from microvk import VkApiResponseException
+from duty.vk import VkApiResponseException
 
 
 @dp.longpoll_event_register('+др', '+друг', '-др', '-друг')
