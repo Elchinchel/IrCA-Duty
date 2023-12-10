@@ -1,4 +1,6 @@
 from duty.objects import dp, LongpollEvent, MySignalEvent
+from duty.objects.dispatcher import LongpollSignalDispatcher
+dp = LongpollSignalDispatcher()
 
 
 @dp.longpoll_event_register('+префикс', '-префикс')

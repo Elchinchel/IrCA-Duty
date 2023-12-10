@@ -1,4 +1,6 @@
 from duty.objects import dp, MySignalEvent
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 from duty.utils import find_mention_by_event
 from duty.vk import VkApiResponseException
 

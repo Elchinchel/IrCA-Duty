@@ -3,6 +3,50 @@ from typing import List,Union
 import requests
 
 
+class VkSubject:
+    """Wrap user or group object and provide access
+    to their common fields
+    """
+
+    id: int
+
+    @property
+    def is_group(self) -> bool:
+        return (self.id < 0)
+
+    @property
+    def name(self) -> str:
+        if self.is_group:
+            return self.data['name']
+        else:
+            return f"{self.first_name} {self.last_name}"
+
+    def __init__(self, obj: dict) -> None:
+        self.data = obj
+
+    def __getattr__(self, __name: str):
+        try:
+            return self.data[__name]
+        except KeyError:
+            raise AttributeError from None
+
+    def push(self, name: 'str | None' = None):
+        if name is None:
+            name = self.name
+        if self.is_group:
+            return f'[club{self.id}|{name}]'
+        else:
+            return f'[id{self.id}|{name}]'
+
+    @classmethod
+    def fetch(cls, obj_id: int, api: VkApi):
+        if obj_id > 0:
+            data = api.users.get(user_ids=id)[0]
+        else:
+            data = api.groups.getById(group_ids=id)[0]
+        return cls(data)
+
+
 def get_last_th_msgs(peer_id: int, api: VkApi) -> List[dict]:
     return api.execute('''return (API.messages.getHistory({"peer_id":"%(peer)s",
     "count":"200", "offset":0}).items) + (API.messages.getHistory({"peer_id":

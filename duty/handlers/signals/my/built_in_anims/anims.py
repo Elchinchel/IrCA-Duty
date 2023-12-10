@@ -1,4 +1,6 @@
 from duty.objects import dp, MySignalEvent
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 from animstarter import start_player
 import json
 import os
@@ -22,7 +24,7 @@ animation_names.extend(rotating_animations.keys())
 @dp.my_signal_event_register(*animation_names)
 def animation_play(event: MySignalEvent):
     text = ' '.join(event.msg['text'].split(' ')[1:])
-    
+
     if text in {'ф', 'f', 'луна', 'ъуъ'}:
         if text == 'ф':
             text = text.replace('ф', 'f')

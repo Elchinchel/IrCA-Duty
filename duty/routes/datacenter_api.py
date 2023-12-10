@@ -69,7 +69,6 @@ def notify_datacenter(state):
 @ensure_request_valid
 def set_dc_secret():
     db.dc_secret = g.data['dc_secret']
-    db.sync()
     return 'ok'
 
 

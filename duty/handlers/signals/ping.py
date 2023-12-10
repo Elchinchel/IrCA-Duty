@@ -1,4 +1,6 @@
 from duty.objects import dp, SignalEvent
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 from duty.utils import format_response
 from datetime import datetime
 

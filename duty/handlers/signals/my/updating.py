@@ -3,6 +3,8 @@ import subprocess
 from typing import Tuple
 from platform import system
 from duty.objects import dp, MySignalEvent
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 
 
 if os.environ.get('FLASK_ENV') != 'development':

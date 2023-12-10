@@ -1,6 +1,8 @@
 import requests
 import traceback
 from duty.objects import dp, MySignalEvent
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 
 
 
@@ -15,7 +17,7 @@ def ssilka(event: MySignalEvent) -> str:
 		event.msg_op(2, f'⚙ Ваша ссылка: vk.cc/{response__json}')
 	except Exception:
 		print(traceback.format_exc())
-	return "ok" 
+	return "ok"
 
 @dp.longpoll_event_register('-сс', '-сс')
 @dp.my_signal_event_register('-сс', '-сс')
@@ -27,4 +29,4 @@ def checkLink(event: MySignalEvent) -> str:
 		event.msg_op(2, f'⚙ Ваша ссылка: {response__json}')
 	except Exception:
 		print(traceback.format_exc())
-	return "ok" 
+	return "ok"

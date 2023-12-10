@@ -1,4 +1,6 @@
 from duty.objects import dp, MySignalEvent, LongpollEvent
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 from duty.utils import format_response
 from datetime import datetime
 
@@ -18,7 +20,7 @@ def ping(event: MySignalEvent) -> str:
     c_time = datetime.now().timestamp()
     delta = round(c_time - event.msg['date'], 2)
 
-    event.msg_op(2, format_response(event.responses['ping_myself'], 
+    event.msg_op(2, format_response(event.responses['ping_myself'],
             время=delta,
             ответ=pings.get(event.command),
             обработано=round(datetime.now().timestamp() - event.time - event.vk_response_time, 2),  # noqa

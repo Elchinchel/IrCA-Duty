@@ -5,6 +5,8 @@ from os.path import join
 import requests
 
 from duty.objects import dp, MySignalEvent, database
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 
 
 path = join(database.core_path, f"database.json")

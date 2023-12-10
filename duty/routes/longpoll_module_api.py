@@ -8,8 +8,9 @@ from werkzeug.exceptions import BadRequest
 
 from duty.vk import VkApi
 from duty.utils import gen_secret, set_json_g_data
-from duty.objects import LongpollEvent, db, dp
-
+from duty.objects import LongpollEvent, db
+from duty.handlers import find_and_join_dispatchers
+from duty.objects.dispatcher import LongpollSignalDispatcher
 
 bp = Blueprint('longpoll_module', __name__)
 logger = get_writer('Приемник сигналов LP модуля')
@@ -40,13 +41,13 @@ def ping():
 @bp.post('/longpoll/event')
 @ensure_request_authorized
 def longpoll():
-    event = LongpollEvent(request.json)
+    dp = find_and_join_dispatchers(LongpollSignalDispatcher)
+    event = LongpollEvent(g.data)
 
     if event.data['access_key'] != event.db.lp_settings['key']:
         return "?"
 
     d = dp.longpoll_event_run(event)
-    db.sync()
     if type(d) == dict:
         return json.dumps(d, ensure_ascii=False)
     return json.dumps({"response": "ok"}, ensure_ascii=False)
@@ -64,7 +65,6 @@ def get_data():
         return json.dumps({'error': error.AuthFail})
 
     db.lp_settings['key'] = gen_secret(length=20)
-    db.sync()
     return json.dumps({
         'chats': db.chats,
         'deleter': db.responses['del_self'],

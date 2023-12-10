@@ -1,5 +1,7 @@
 # bugfix by https://github.com/Alex1249 | vk: http://vk.com/id194861150
 from duty.objects import dp, MySignalEvent
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 
 
 EN_CHARS = "~!@#$%^&qwertyuiop[]asdfghjkl;'zxcvbnm,./QWERTYUIOP{}ASDFGHJKL:\"|ZXCVBNM<>?"

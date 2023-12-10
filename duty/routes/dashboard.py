@@ -127,7 +127,6 @@ def do_auth():
     db.auth_token_date = int(time.time())
     response.set_cookie("auth", value=db.auth_token)
     response.headers['location'] = "/"
-    db.sync()
     return response, 302
 
 
@@ -176,7 +175,6 @@ def api(method: str):
     login_check(request)
     handler = globals().get(f'app_method_{method}', lambda: None)
     result = handler()
-    db.sync()
     return result or redirect('/')
 
 

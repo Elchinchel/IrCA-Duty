@@ -1,6 +1,8 @@
 from typing import TypeVar
 from pathlib import Path
+from logging import getLogger
 from functools import lru_cache
+from traceback import format_exc
 from importlib import import_module
 
 from flask import current_app
@@ -14,14 +16,22 @@ from duty.objects.dispatcher import (
 
 DispatcherT = TypeVar('DispatcherT', bound=BaseDispatcher)
 
+logger = getLogger('handlers init')
+
 
 def _iter_dispatchers(cls: 'type[BaseDispatcher]'):
     root_dir = Path(__file__).parent
 
     for path in root_dir.glob('*/**/*.py'):
-        import_path = list(path.relative_to(root_dir).parts)
+        rel_path = path.relative_to(root_dir)
+        import_path = list(rel_path.parts)
         import_path[-1] = import_path[-1].rpartition('.py')[0]
-        print(import_module('.' + '.'.join(import_path), 'duty.handlers'))
+        try:
+            module = import_module('.' + '.'.join(import_path), 'duty.handlers')
+        except Exception:
+            logger.critical('Failed to load %r:\n%s', rel_path, format_exc())
+        else:
+            print(module)
     return
 
 

@@ -171,4 +171,5 @@ except (FileNotFoundError, json.JSONDecodeError):
     write('database.json', {})
 
 
-db = DB()  # один пользователь, один поток, один экземпляр, мне стабильно до пизды
+# intentionally only one global not thread safe instance
+db = DB()

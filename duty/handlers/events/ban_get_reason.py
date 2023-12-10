@@ -1,4 +1,6 @@
 from duty.objects import dp, BaseEvent
+from duty.objects.dispatcher import IrisCBAPIDispatcher
+dp = IrisCBAPIDispatcher()
 from duty.api_utils import get_msg_id
 
 

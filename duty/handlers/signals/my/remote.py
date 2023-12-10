@@ -1,6 +1,8 @@
 import time
 
 from duty.objects import dp, MySignalEvent, db
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 from duty.utils import find_mention_by_event, get_plural, cmid_key
 from typing import Union
 import requests

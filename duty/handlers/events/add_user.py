@@ -1,19 +1,24 @@
-from duty.objects import dp, BaseEvent
-from duty.utils import ment_user, format_response
 from duty.vk import VkApiResponseException
+from duty.vk.utils import VkSubject
+from duty.utils import format_response
+from duty.objects import BaseEvent
+from duty.objects.events import BanExpiredEvent, AddUserEvent
+from duty.objects.dispatcher import IrisCBAPIDispatcher
+from duty.objects import db
+
+dp = IrisCBAPIDispatcher()
 
 
-def user_add(event: BaseEvent, typ: str):
-    user = event.api('users.get', user_ids=event.obj['user_id'])[0]
-
+def user_add(event: 'AddUserEvent | BanExpiredEvent', typ: str):
+    user = VkSubject.fetch(event.obj.user_id, event.api)
 
     def _format(response_name, err=None):
         return format_response(
-            event.responses[response_name],
-            ссылка=ment_user(user), имя=event.chat.name, ошибка=err
+            db.responses[response_name],
+            ссылка=user.push(), имя=event.chat.name, ошибка=err
         )
 
-    if event.obj['user_id'] == event.db.owner_id:
+    if event.obj.user_id == db.owner_id:
         event.send(_format('user_ret_self'))
 
         return 'ok'
@@ -46,11 +51,11 @@ def user_add(event: BaseEvent, typ: str):
         return {"response":"error","error_code":"0","error_message":""}
 
 
-@dp.event_register('addUser')
+@dp.event_register(AddUserEvent)
 def add_user(event: BaseEvent) -> str:
     return user_add(event, 'user_ret_process')
 
 
-@dp.event_register('banExpired')
+@dp.register(BanExpiredEvent)
 def ban_expired(event: BaseEvent) -> str:
     return user_add(event, 'user_ret_ban_expired')

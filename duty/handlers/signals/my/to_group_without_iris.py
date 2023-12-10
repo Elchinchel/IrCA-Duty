@@ -1,4 +1,6 @@
 from duty.objects import MySignalEvent, dp
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 import requests
 import re
 from duty.api_utils import get_msg

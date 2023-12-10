@@ -9,6 +9,8 @@ from datetime import datetime, timezone, timedelta
 from duty.utils import find_mention_by_event
 from duty.api_utils import get_last_th_msgs
 from duty.objects import dp, MySignalEvent
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 
 
 # Автор: https://vk.com/id570532674, доработал: https://vk.com/id194861150

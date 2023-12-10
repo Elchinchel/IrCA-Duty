@@ -1,4 +1,6 @@
 from duty.objects import MySignalEvent, dp
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 import requests, os
 
 
@@ -73,7 +75,7 @@ def insta(event: MySignalEvent) -> str:
     uploaded = requests.post(upload_url, files={'photo': open("output.png", 'rb')}).json()
     a = event.api('photos.saveMessagesPhoto', server=uploaded["server"], photo=uploaded["photo"], hash=uploaded["hash"])[0]
     event.msg_op(2, '', attachment=f'photo{a["owner_id"]}_{a["id"]}')
-    
+
     os.remove('input.png')
     os.remove("output.png")
     return "ok"

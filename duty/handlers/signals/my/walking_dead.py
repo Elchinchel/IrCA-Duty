@@ -1,4 +1,6 @@
 from duty.objects import dp, MySignalEvent
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 from urllib import request
 from datetime import datetime
 
@@ -11,7 +13,7 @@ def steps(event: MySignalEvent) -> str:
         event.msg_op(1, f'Неверный формат.\nИспользование: "{args[0]} шаги [количество шагов <= 80000] [дистанция в метрах <= 50000]".\nЛибо: "{args[0]} шаги"')
     if len(args) == 4:
         steps, distance = args[1], args[2]
-    else: 
+    else:
         steps, distance = 80000, 50000
     date = datetime.today().strftime('%Y-%m-%d')
     user_agent = 'VKAndroidApp/7.7-10445 (Android 11; SDK 30; arm64-v8a; Xiaomi M2003J15SC; ru; 2340x1080)'

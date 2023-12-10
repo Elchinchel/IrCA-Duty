@@ -1,6 +1,8 @@
 import requests
 
 from duty.objects import MySignalEvent, dp
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 from duty.utils import find_mention_by_event, path_from_root
 
 

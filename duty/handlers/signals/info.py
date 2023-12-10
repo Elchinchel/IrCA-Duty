@@ -1,4 +1,6 @@
 from duty.objects import dp, SignalEvent, __version__
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 from duty.utils import ment_user, format_response
 import time
 
@@ -13,7 +15,7 @@ def sinfo(event: SignalEvent) -> str:
     owner = event.api('users.get', user_ids=event.db.owner_id)[0]
 
     event.send(format_response(
-        event.responses['info_duty'], 
+        event.responses['info_duty'],
         версия=__version__,
         владелец=ment_user(owner),
         чаты=len(event.db.chats.keys()),

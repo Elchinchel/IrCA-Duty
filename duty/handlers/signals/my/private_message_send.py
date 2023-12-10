@@ -3,6 +3,8 @@ from time import sleep
 from duty.utils import find_mention_by_event
 from duty.vk import VkApiResponseException
 from duty.objects import MySignalEvent, dp
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 
 
 @dp.longpoll_event_register('в', 'влс')

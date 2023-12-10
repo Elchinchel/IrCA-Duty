@@ -2,6 +2,8 @@ import requests
 import datetime
 import traceback
 from duty.objects import dp, MySignalEvent
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 
 @dp.longpoll_event_register('погода')
 @dp.my_signal_event_register('погода')
@@ -20,17 +22,17 @@ def get_weather(event: MySignalEvent) -> str:
             else:
                 text = f"""
                 💬 Погода в {data['name']}
-    
+
                 🌡️ Температура: {data['main']['temp']}°С
                 ☀️ Ощущается как: {data['main']['feels_like']}°С
                 ❄️ Макс/мин: {data['main']['temp_max']}°С/{data['main']['temp_min']}°С
                 ☁️ Погода: {data['weather'][0]['description'].capitalize()}
                 🌀 Ветер: {data['wind']['speed']} м/с
                 💧 Влажность: {data['main']['humidity']}%
-    
+
                 🌆 Закат: {str(datetime.datetime.fromtimestamp(data['sys']['sunset']))[11:]}
                 🌅 Рассвет: {str(datetime.datetime.fromtimestamp(data['sys']['sunrise']))[11:]}
-    
+
                 ☄ Давление: {data['main']['pressure']} мбар
                 👀 Видимость: {data['visibility']}м""".replace("                ", "")
 

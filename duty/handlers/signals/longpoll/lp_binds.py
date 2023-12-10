@@ -1,4 +1,6 @@
 from duty.objects import dp, LongpollEvent
+from duty.objects.dispatcher import LongpollSignalDispatcher
+dp = LongpollSignalDispatcher()
 
 
 @dp.longpoll_event_register('связать', 'отвязать')

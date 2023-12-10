@@ -1,5 +1,7 @@
 from animstarter import start_player
 from duty.objects import MySignalEvent, dp
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 from .template import delete_template
 
 

@@ -2,6 +2,8 @@
 import typing
 from duty.api_utils import get_msg
 from duty.objects import dp, BaseEvent, SignalEvent
+from duty.objects.dispatcher import IrisCBAPIDispatcher
+dp = IrisCBAPIDispatcher()
 from duty.utils import cmid_key
 from duty.vk import VkApiResponseException
 import re

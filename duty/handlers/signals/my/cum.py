@@ -5,6 +5,8 @@ from PIL import Image
 
 from duty.utils import path_from_root
 from duty.objects import dp, MySignalEvent
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 
 
 @dp.longpoll_event_register('сперм', 'sperm')

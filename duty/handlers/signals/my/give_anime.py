@@ -1,6 +1,8 @@
 from io import BytesIO
 import requests
 from duty.objects import dp, MySignalEvent
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 
 
 # Прошу прощения за говнокод. Лень было функцию для загрузки делать :)

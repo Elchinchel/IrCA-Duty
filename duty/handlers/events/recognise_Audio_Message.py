@@ -1,4 +1,6 @@
 from duty.objects import dp, BaseEvent
+from duty.objects.dispatcher import IrisCBAPIDispatcher
+dp = IrisCBAPIDispatcher()
 import time
 # code from:
 # vk: http://vk.com/id194861150

@@ -1,4 +1,6 @@
 from duty.objects import MySignalEvent, dp
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 import requests, os
 # Не спиздил, а позаимствовал
 

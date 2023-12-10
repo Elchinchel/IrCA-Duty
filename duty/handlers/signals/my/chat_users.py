@@ -2,6 +2,8 @@ from typing import Tuple, List
 from math import ceil
 from duty.utils import get_index, format_push
 from duty.objects import dp, MySignalEvent
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 
 
 def users_getter(event: MySignalEvent) -> Tuple[MySignalEvent, List[dict], List[dict]]:  # noqa

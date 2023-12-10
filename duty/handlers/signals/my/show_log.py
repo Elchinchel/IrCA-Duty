@@ -2,6 +2,8 @@ import requests
 from io import StringIO
 from os.path import dirname, join
 from duty.objects import dp, MySignalEvent
+from duty.objects.dispatcher import MySignalDispatcher
+dp = MySignalDispatcher()
 
 
 logpath = join(dirname(dirname(dirname(__file__))), f"duty.log")
