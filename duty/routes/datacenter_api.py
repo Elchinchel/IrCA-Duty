@@ -1,103 +1,145 @@
-import json
-import traceback
-
-from enum import Enum
+from logging import FileHandler, getLogger
 from pathlib import Path
-from logging import getLogger, FileHandler
-from functools import wraps
 
-from flask import g, request, jsonify, send_from_directory
+from flask import g, jsonify, send_from_directory
 from flask.blueprints import Blueprint
-from werkzeug.exceptions import BadRequest, InternalServerError
+from werkzeug.exceptions import InternalServerError, ServiceUnavailable
 
+from duty.bot.message import Message
+from duty.database.accessor.base import BaseAccessor
+from duty.database.models import Chat, InstanceInfo, UserSecrets
+from duty.database.repository.chat.base import BaseChatRepository
+from duty.database.repository.user.base import BaseUserRepository
+from duty.dto.datacenter import (
+    DC_GROUP_ID,
+    DatacenterError,
+    DatacenterRepeatMessageRequest,
+    DatacenterRequest,
+    DatacenterSetSecretRequest,
+    DutyError,
+    DutyInfoResponse,
+)
+from duty.utils.parse import set_json_g_data
 from duty.vk import VkApi, VkApiResponseException
-from duty.utils import set_json_g_data
-from duty.objects import Chat, Message, db, __version__
+from library.adaptix import Retort
+from library.dishka import Container, FromDishka
+from library.dishka.integrations.flask import inject
 
 
 bp = Blueprint('datacenter', __name__)
 logger = getLogger(__name__)
+retort = Retort()
 
 
-class DutyError(Enum):
-    HOST_TROUBLES = 1
-    NOT_TRUSTED = 2
-    WRONG_SESSION = 3
-    NOT_BINDED = 4
-    VK_ERROR = 5
+def make_error_response(
+        error_code: 'DutyError | DatacenterError',
+        vk_error_code: int = 0,
+        vk_error_message: str = ''
+):
+    data = {'error': error_code.value}
+    if vk_error_code:
+        data['code'] = vk_error_code
+    if vk_error_message:
+        data['msg'] = vk_error_message
+    return jsonify(data)
 
 
-class DCError(Enum):
-    WRONG_SECRET = 'WrongSecret'
-    WRONG_USER_ID = 'NotMe'
+def notify_datacenter(container: Container):
+    inst_info = container.get(InstanceInfo)
+    if not inst_info.installed:
+        return
+
+    secrets = container.get(UserSecrets)
+    try:
+        message = f'+cod {secrets.cb_secret} {inst_info.host}/'
+        api = VkApi(secrets.vk_main_token)
+        message_id = api.send_msg(message, DC_GROUP_ID)
+        api.delete_msg(message_id, True)
+    except Exception:  # noqa
+        secrets.dc_secret = ''  # XXX: обновляются ли данные после коммита без вызова set? предположение: да, потому что объект после селекта привязан к активной сессии
 
 
-def error(code: 'DutyError | DCError'):
-    return jsonify({'error': code.value})
+class RequestValidateMiddleware:
+    def __init__(self, inner, request_cls):
+        self.inner = inner
+        self.__name__ = inner.__name__
+
+        self.request_cls = request_cls or DatacenterRequest
+        self.pass_request = (request_cls is not None)
+
+    @inject
+    def __call__(
+            self,
+            inst_info: FromDishka[InstanceInfo],
+            user_secrets_accessor: FromDishka[BaseAccessor[UserSecrets]]
+    ):
+        if not inst_info.installed:
+            raise ServiceUnavailable('Duty not configured')
+
+        request = retort.load(g.data, self.request_cls)
+
+        if request.user_id != inst_info.owner_vk_id:
+            return make_error_response(DatacenterError.WRONG_USER_ID)
+
+        secrets = user_secrets_accessor.get()
+        if request.secret != secrets.cb_secret:
+            return make_error_response(DatacenterError.WRONG_SECRET)
+
+        with g.dishka_container({UserSecrets: secrets}):
+            if self.pass_request:
+                return self.inner(request)
+            return self.inner()
 
 
-def ensure_request_valid(func):
-    @wraps(func)
-    @set_json_g_data
-    def decorator(*args, **kwargs):
-        if 'user_id' in g.data and g.data['user_id'] != db.owner_id:
-            return error(DCError.WRONG_USER_ID)
-        if g.data['secret'] != db.secret:
-            return error(DCError.WRONG_SECRET)
-        return func(*args, **kwargs)
-
+def ensure_request_valid(request_cls: 'type | None'):
+    def decorator(func):
+        handler = RequestValidateMiddleware(func, request_cls)
+        return set_json_g_data(handler)
     return decorator
-
-
-@bp.record_once
-def notify_datacenter(state):
-    if db.installed:
-        try:
-            VkApi(db.access_token).execute('''API.messages.delete({
-                "message_ids": API.messages.send({
-                    "peer_id":-195759899, "message":"%s", "random_id": 0
-                }),
-                "delete_for_all": 1
-            });''' % f'+cod {db.secret} {db.host}/')
-        except Exception:
-            db.dc_secret = None
-            db.sync()
 
 
 @bp.post('/dc')  # XXX: deprecated
 @bp.post('/datacenter/secret')
-@ensure_request_valid
-def set_dc_secret():
-    db.dc_secret = g.data['dc_secret']
+@ensure_request_valid(DatacenterSetSecretRequest)
+@inject
+def set_dc_secret(
+    request: DatacenterSetSecretRequest,
+    user_secrets: FromDishka[UserSecrets]
+):
+    user_secrets.dc_secret = request.secret
     return 'ok'
 
 
 @bp.post('/chex')  # XXX: deprecated
 @bp.get('/datacenter/dutyInfo')
-@ensure_request_valid
-def get_duty_info():
-    try:
-        user_id = VkApi(db.access_token, True)('users.get')[0]['id']
-    except VkApiResponseException:
-        user_id = 0
+@ensure_request_valid(None)
+@inject
+def get_duty_info(
+        user_secrets: FromDishka[UserSecrets],
+        instance_info: FromDishka[InstanceInfo]
+):
+    def get_user_id_by_token(token: str):
+        try:
+            return VkApi(token, True)('users.get')[0]['id']
+        except VkApiResponseException:
+            return 0
 
-    try:
-        me_id = VkApi(db.me_token, True)('users.get')[0]['id']
-    except VkApiResponseException:
-        me_id = 0
+    user_id = get_user_id_by_token(user_secrets.vk_main_token)
+    user_me_id = get_user_id_by_token(user_secrets.vk_me_token)
 
-    return jsonify({
-        'owner_id': db.owner_id,
-        'user_id': user_id,
-        'me_id': me_id,
-        'mt': (me_id != 0),
-        'v': __version__
-    })
+    response = DutyInfoResponse(
+        v=instance_info.version,
+        mt=(user_me_id != 0),
+        me_id=user_me_id,
+        user_id=user_id,
+        owner_id=instance_info.owner_vk_id,
+    )
+    return jsonify(retort.dump(response))
 
 
 @bp.get('/log')  # XXX: deprecated
 @bp.get('/datacenter/dutyLog')
-@ensure_request_valid
+@ensure_request_valid(None)
 def get_duty_log():
     for handler in getLogger().handlers:
         if isinstance(handler, FileHandler):
@@ -108,41 +150,61 @@ def get_duty_log():
 
 @bp.post('/remote')  # XXX: deprecated
 @bp.post('/datacenter/remoteMessage')
-@ensure_request_valid
-def send_remote_message():
-    if g.data['user_id'] not in db.trusted_users:
-        return error(DutyError.NOT_TRUSTED)
-    if g.data['chat'] not in db.chats:
-        return error(DutyError.NOT_BINDED)
+@ensure_request_valid(DatacenterRepeatMessageRequest)
+@inject
+def repeat_message(
+        request: DatacenterRepeatMessageRequest,
+        inst_info: FromDishka[InstanceInfo],
+        user_secrets: FromDishka[UserSecrets],
+        chat_repository: FromDishka[BaseChatRepository],
+        user_repository: FromDishka[BaseUserRepository]
+):
+    user = user_repository.must_get(inst_info.owner_vk_id)
+
+    for tr_user in user.trusted_users:
+        if request.user_id == tr_user.vk_id:
+            break
+    else:
+        return make_error_response(DutyError.NOT_TRUSTED)
+
+    chat = chat_repository.get(request.chat)
+    if chat is None:
+        return make_error_response(DutyError.NOT_BINDED)
 
     try:
-        return send_message_from_trusted_user(g.data)
-    except VkApiResponseException as e:
-        return jsonify({
-            'error': DutyError.VK_ERROR.value,
-            'code': e.error_code,
-            'msg': e.error_msg
-        })
-    except Exception:
-        logger.error(
-            "Ошибка при обработке запроса. Данные: %s\n%s",
-            json.dumps(g.data, indent=2),
-            traceback.format_exc()
+        return send_message_from_trusted_user(
+            chat,
+            request,
+            user_secrets,
         )
-        return error(DutyError.HOST_TROUBLES)
+    except VkApiResponseException as e:
+        return make_error_response(
+            DutyError.VK_ERROR,
+            e.error_code,
+            e.error_msg
+        )
+    except Exception:  # noqa
+        logger.exception(
+            "Ошибка при обработке запроса %s",
+            request
+        )
+        return make_error_response(DutyError.HOST_TROUBLES)
 
 
-def send_message_from_trusted_user(data: dict):
-    vk = VkApi(db.access_token, raise_excepts=True)
-    chat = Chat(db.chats[data['chat']], data['chat'])
+def send_message_from_trusted_user(
+        chat: Chat,
+        request: DatacenterRepeatMessageRequest,
+        user_secrets: UserSecrets,
+):
+    vk = VkApi(user_secrets.vk_main_token, raise_excepts=True)
 
     msg = vk.messages.getByConversationMessageId(
         peer_id=chat.peer_id,
-        conversation_message_ids=data['local_id']
+        conversation_message_ids=request.local_id
     )['items'][0]
 
-    if data['user_id'] != msg['from_id']:
-        return error(DutyError.NOT_TRUSTED)
+    if request.user_id != msg['from_id']:
+        return make_error_response(DutyError.NOT_TRUSTED)
 
     msg = Message(msg)
     params = {'attachment': ','.join(msg.attachments)}
