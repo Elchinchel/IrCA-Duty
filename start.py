@@ -1,53 +1,48 @@
+import logging.config
+import logging.handlers
 import os
-import logging
-from logging.config import dictConfig
 
-from duty import create_app
-from duty.utils import ROOT_DIR
+from duty import config, create_app
+from duty.utils.misc import ROOT_DIR
 
 
 def configure_logging():
     is_dev_env = (os.getenv('FLASK_ENV') == 'development')
-    log_level = logging.DEBUG if is_dev_env else logging.INFO
+    log_level = config.load_from_env().log_level
 
-    handlers = {
-        'file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': ROOT_DIR / 'duty.log',
-            'backupCount': 1,
-            'maxBytes': 8 * 1024 * 1024,
-            'level': log_level,
-        }
-    }
+    log_dir = ROOT_DIR / 'logs'
+    os.makedirs(log_dir, exist_ok=True)
+
+    handlers: list = [
+        logging.handlers.RotatingFileHandler(
+            log_dir / 'duty.log',
+            backupCount=1,
+            maxBytes=8 * 1024 * 1024,
+        )
+    ]
     if is_dev_env:
-        handlers['console'] = {
-            'class': 'logging.handlers.StreamHandler',
-            'level': log_level
-        }
+        handlers.append(logging.StreamHandler())
 
-    dictConfig({
-        'version': 1,
-        'formatters': {
-            'default': {
-                'format': '[%(asctime)s] %(levelname)s : %(message)s'
-            }
-        },
-        'handlers': handlers,
-        'root': {
-            'level': log_level,
-            'handlers': list(handlers.keys())
-        }
-    })
+    formatter = logging.Formatter(
+        '%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s',
+        '%d.%m.%Y %H:%M:%S'
+    )
+
+    logging.root.setLevel(log_level)
+    for hdlr in handlers:
+        hdlr.setFormatter(formatter)
+        logging.root.addHandler(hdlr)
 
 
 def dev_run():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='Run service with Flask built-in development server'
+        description='Run app with Flask built-in development server'
     )
     parser.add_argument('--port', default='5000')
     parser.add_argument('--host', default='localhost')
+    parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
 
     try:
@@ -58,10 +53,10 @@ def dev_run():
     if not (1 <= port <= 65536):
         raise ValueError('--port should be an integer in range from 1 to 65536')
 
-    create_app().run(host=args.host, port=port)
+    create_app().run(host=args.host, port=port, debug=args.debug)
 
 
-# configure_logging()
+configure_logging()
 
 if __name__ == "__main__":
     dev_run()
