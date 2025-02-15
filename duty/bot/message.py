@@ -1,38 +1,37 @@
 from html import unescape
 from typing import List
 
-from duty.utils import att_parse
+from duty.vk import VkApi
+from duty.vk.utils import VkMessage
 
 
-class Message:
-    _raw: dict
+class MessageRef:
+    def __init__(self, message_id: int, peer_id: int, api: VkApi) -> None:
+        self._id = message_id
+        self._api = api
+        self._peer = peer_id
 
-    id: int
-    peer_id: int
+    def edit(self, text: str, **params):
+        self._api.edit_msg(text, self._peer, self._id)
 
-    reply: dict
-    fwd: List[dict]
-    attachments: List[str]
+    def delete(self, delete_for_all: bool = True):
+        self._api.delete_msg(self._id, delete_for_all)
 
-    text: str
+
+class Message(VkMessage):
     args: List[str]
     payload: str
-
-    def __init__(self, msg: dict):
-        msg['text'] = unescape(msg['text'])
-
-        self._raw = msg
-        self._parse_text()
-
-        self.fwd = msg.get('fwd_messages', [])
-        self.reply = msg.get('reply_message', {})
-        self.attachments = att_parse(msg.get('attachments', []))
 
     @property
     def command(self) -> str:
         if self._command is None:
             raise AttributeError('Message has no command')
         return self._command
+
+    def __init__(self, msg: dict):
+        msg['text'] = unescape(msg['text'])
+        super().__init__(msg)
+        self._parse_text()
 
     def _parse_text(self):
         args_str, _, payload = self.text.partition('\n')
@@ -43,9 +42,3 @@ class Message:
             self._command = self.args.pop(0).lower()
         else:
             self._command = None
-
-    def __getattr__(self, __name: str):
-        try:
-            return self._raw[__name]
-        except KeyError:
-            raise AttributeError(f'{type(self)!r} has no attribute {__name!r}') from None

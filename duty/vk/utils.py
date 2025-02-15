@@ -1,9 +1,28 @@
-from duty.vk import VkApi, VkApiResponseException
-from typing import List,Union
+from typing import Any, Dict, List, Union
+from functools import cached_property
+
 import requests
 
+from duty.vk import VkApi
+from duty.utils.parse import att_parse
 
-class VkSubject:
+
+class ProxyObject:
+    def __init__(self, obj: Dict[str, Any]) -> None:
+        self._obj = obj
+
+    def __getitem__(self, __name: str):
+        return self._obj[__name]
+
+    def __getattr__(self, __name: str):
+        try:
+            return self._obj[__name]
+        except KeyError:
+            pass
+        return object.__getattribute__(self, __name)
+
+
+class VkSubject(ProxyObject):
     """Wrap user or group object and provide access
     to their common fields
     """
@@ -24,12 +43,6 @@ class VkSubject:
     def __init__(self, obj: dict) -> None:
         self.data = obj
 
-    def __getattr__(self, __name: str):
-        try:
-            return self.data[__name]
-        except KeyError:
-            raise AttributeError from None
-
     def push(self, name: 'str | None' = None):
         if name is None:
             name = self.name
@@ -41,10 +54,55 @@ class VkSubject:
     @classmethod
     def fetch(cls, obj_id: int, api: VkApi):
         if obj_id > 0:
-            data = api.users.get(user_ids=id)[0]
+            data = api.users.get(user_ids=obj_id)[0]
         else:
-            data = api.groups.getById(group_ids=id)[0]
+            data = api.groups.getById(group_ids=obj_id)[0]
         return cls(data)
+
+
+class VkMessage(ProxyObject):
+    id: int
+    peer_id: int
+    from_id: int
+
+    text: str
+
+    @property
+    def cmid(self) -> int:
+        return self.conversation_message_id
+
+    @cached_property
+    def fwd(self) -> List[dict]:
+        return self._obj.get('fwd_messages', [])
+
+    @cached_property
+    def reply(self) -> dict:
+        return self._obj.get('reply_message', {})
+
+    @cached_property
+    def attachments(self) -> List[str]:
+        return att_parse(self._obj.get('attachments', []))
+
+    @classmethod
+    def fetch_by_local_id(cls, api: VkApi, peer_id: int, local_id: int):
+        resp = api.messages.getByConversationMessageId(
+            conversation_message_ids=local_id, peer_id=peer_id
+        )
+        try:
+            msg_obj = resp['items'][0]
+        except (KeyError, IndexError):
+            raise ValueError('Unknown message (id %d in peer %d)'
+                             % (local_id, peer_id))
+        return cls(msg_obj)
+
+
+# XXX экспериментальненький интерфейс
+class VkConversation:
+    def __init__(self, peer_id: int) -> None:
+        self.peer_id = peer_id
+
+    def get_history(self) -> List[VkMessage]:
+        return []
 
 
 def get_last_th_msgs(peer_id: int, api: VkApi) -> List[dict]:
