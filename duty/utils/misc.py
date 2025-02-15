@@ -55,10 +55,11 @@ def gen_secret(
         chars: str = 'abcdefghijklmnopqrstuvwxyz0123456789',
         length: 'int | None' = None
 ):
+    rnd = random.SystemRandom()
     secret = ''
-    length = length or random.randint(64, 80)
+    length = length or rnd.randint(64, 128)
     while len(secret) < length:
-        secret += chars[random.randint(0, len(chars)-1)]
+        secret += chars[rnd.randint(0, len(chars)-1)]
     return secret
 
 
