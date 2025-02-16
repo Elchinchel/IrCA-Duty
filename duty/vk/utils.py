@@ -1,10 +1,10 @@
-from typing import Any, Dict, List, Union
 from functools import cached_property
+from typing import Any, Dict, List, Union
 
 import requests
 
-from duty.vk import VkApi
 from duty.utils.parse import att_parse
+from duty.vk import VkApi
 
 
 class ProxyObject:
@@ -58,6 +58,16 @@ class VkSubject(ProxyObject):
         else:
             data = api.groups.getById(group_ids=obj_id)[0]
         return cls(data)
+
+    @classmethod
+    def fetch_self(cls, api: VkApi):
+        code = 'return {"user": API.users.get(), "group": API.groups.getById()};'
+        resp = api('execute', code=code)
+        if resp['user']:
+            return cls(resp['user'])
+        if resp['group']:
+            return cls(resp['group'])
+        raise ValueError('Unexpected response: %r' % resp)
 
 
 class VkMessage(ProxyObject):

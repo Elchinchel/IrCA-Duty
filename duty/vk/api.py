@@ -1,7 +1,10 @@
+import json
 import logging
 from typing import Any
 
 import requests
+
+from duty.vk.utils import VkSubject
 
 
 logger = logging.getLogger('VK API')
@@ -17,29 +20,49 @@ class VkApiResponseException(Exception):
         return 'Ошибка #%s: "%s"' % (self.error_code, self.error_msg)
 
 
+class UnknownResponse(Exception):
+    ...
+
+
 class VkApi:
     url: str = 'https://api.vk.com/method/'
     query: str
 
-    def __init__(self, access_token: str, version: str = "5.110"):
+    def __init__(self, access_token: str, version: str = "5.130"):
         self.query = f'?v={version}&access_token={access_token}&lang=ru'
+        self.subject = None
 
     def __call__(self, method, **kwargs) -> Any:
         if logger.level < logging.INFO:
-            logger.debug(f'URL = "{self.url}{method}{self.query}" Data = {kwargs}')
+            logger.debug(f'URL = "{self.url}{method}" Data = {kwargs}')
 
-        r = requests.post(f'{self.url}{method}{self.query}', data=kwargs)
-        if r.status_code == 200:
-            r = r.json()
-            if 'response' in r.keys():
-                logger.info(f'Запрос {method} выполнен')
-                return r['response']
-            elif 'error' in r.keys():
-                logger.warning(f"Запрос {method} не выполнен: {r['error']}")
-                raise VkApiResponseException(**r["error"])
-            return r
+        resp = requests.post(f'{self.url}{method}{self.query}', data=kwargs)
+        if resp.status_code == 200:
+            resp = resp.json()
+
+            if 'execute_errors' in resp:
+                logger.warning(
+                    'Ошибки при выполнении execute:\n%s',
+                    json.dumps(resp['execute_errors'], ensure_ascii=False, indent=4)
+                )
+
+            if 'response' in resp.keys():
+                logger.info('Запрос %r выполнен', method)
+                return resp['response']
+
+            if 'error' in resp.keys():
+                logger.warning('Запрос %r не выполнен: %r', method, resp['error'])
+                raise VkApiResponseException(resp['error'])
+
+            raise UnknownResponse(resp)
         else:
-            raise Exception('networkerror', r.status_code)
+            raise Exception('networkerror', resp.status_code)
+
+    def get_subject(self) -> VkSubject:
+        if self.subject is not None:
+            return self.subject
+        self.subject = VkSubject.fetch_self(self)
+        return self.subject
 
     def send_msg(self, text: str, peer_id: int, **kwargs):
         return self.messages.send(
