@@ -1,19 +1,17 @@
+import logging
 from typing import Any
-from logging import getLogger
 
 import requests
 
-logger = getLogger('VK API')
+
+logger = logging.getLogger('VK API')
 
 
 class VkApiResponseException(Exception):
-    def __init__(self, *args, **kwargs):
-        self.error_code = kwargs.get('error_code', None)
-        self.error_msg = kwargs.get('error_msg', None)
-        self.request_params = kwargs.get('request_params', None)
-
-        self.args = args
-        self.kwargs = kwargs
+    def __init__(self, data):
+        self.error_code = data.get('error_code', None)
+        self.error_msg = data.get('error_msg', None)
+        self.request_params = data.get('request_params', None)
 
     def __str__(self):
         return 'Ошибка #%s: "%s"' % (self.error_code, self.error_msg)
@@ -22,40 +20,38 @@ class VkApiResponseException(Exception):
 class VkApi:
     url: str = 'https://api.vk.com/method/'
     query: str
-    raise_excepts: bool
 
-    def __init__(self, access_token: str, raise_excepts: bool = False, version: str = "5.110"):
-        'raise_excepts - если True, ошибки ВК будут вызывать исключения'
+    def __init__(self, access_token: str, version: str = "5.110"):
         self.query = f'?v={version}&access_token={access_token}&lang=ru'
-        self.raise_excepts = raise_excepts
 
     def __call__(self, method, **kwargs) -> Any:
-        logger.debug(f'URL = "{self.url}{method}{self.query}" Data = {kwargs}')
+        if logger.level < logging.INFO:
+            logger.debug(f'URL = "{self.url}{method}{self.query}" Data = {kwargs}')
+
         r = requests.post(f'{self.url}{method}{self.query}', data=kwargs)
         if r.status_code == 200:
             r = r.json()
             if 'response' in r.keys():
-                logger.info(f"Запрос {method} выполнен")
+                logger.info(f'Запрос {method} выполнен')
                 return r['response']
             elif 'error' in r.keys():
                 logger.warning(f"Запрос {method} не выполнен: {r['error']}")
-                if self.raise_excepts:
-                    raise VkApiResponseException(**r["error"])
+                raise VkApiResponseException(**r["error"])
             return r
-        elif self.raise_excepts:
-            raise Exception('networkerror')
+        else:
+            raise Exception('networkerror', r.status_code)
 
-    def send_msg(self, message: str, peer_id: int, **kwargs):
+    def send_msg(self, text: str, peer_id: int, **kwargs):
         return self.messages.send(
-            message=message,
+            message=text,
             peer_id=peer_id,
             random_id=0,
             **kwargs
         )
 
-    def edit_msg(self, message: str, peer_id: int, message_id: int, **kwargs):
+    def edit_msg(self, text: str, peer_id: int, message_id: int, **kwargs):
         return self.messages.edit(
-            message=message,
+            message=text,
             peer_id=peer_id,
             message_id=message_id,
             **kwargs
@@ -64,7 +60,7 @@ class VkApi:
     def delete_msg(self, message_id: int, for_all: bool):
         return self.messages.delete(
             message_id=message_id,
-            delete_for_all=for_all
+            delete_for_all=int(for_all)
         )
 
     def execute(self, code):
