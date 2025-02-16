@@ -26,7 +26,7 @@ def upgrade() -> None:
         'chat',
         sa.Column('iris_id', sa.String(), nullable=False),
         sa.Column('peer_id', sa.BigInteger(), nullable=False),
-        sa.Column('name', sa.String(length=510), nullable=True),
+        sa.Column('name', sa.String(length=512), nullable=True),
         sa.Column('installed', sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint('iris_id'),
     )
@@ -42,7 +42,7 @@ def upgrade() -> None:
     op.create_table(
         'user',
         sa.Column('vk_id', sa.BigInteger(), nullable=False),
-        sa.Column('host', sa.String(length=2040), nullable=False),
+        sa.Column('host', sa.String(length=2048), nullable=False),
         sa.Column('installed', sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint('vk_id'),
     )
@@ -62,10 +62,10 @@ def upgrade() -> None:
     op.create_table(
         'user_secrets',
         sa.Column('vk_id', sa.BigInteger(), nullable=False),
-        sa.Column('cb_secret', sa.String(length=1020), nullable=True),
-        sa.Column('dc_secret', sa.String(length=1020), nullable=True),
-        sa.Column('vk_me_token', sa.String(length=510), nullable=True),
-        sa.Column('vk_main_token', sa.String(length=510), nullable=True),
+        sa.Column('cb_secret', sa.String(length=1024), nullable=True),
+        sa.Column('dc_secret', sa.String(length=1024), nullable=True),
+        sa.Column('vk_me_token', sa.String(length=512), nullable=True),
+        sa.Column('vk_main_token', sa.String(length=512), nullable=True),
         sa.PrimaryKeyConstraint('vk_id'),
     )
     op.create_table(
@@ -83,7 +83,7 @@ def upgrade() -> None:
     )
     op.create_table(
         'user_voice_template',
-        sa.Column('attachment', sa.String(length=510), nullable=False),
+        sa.Column('attachment', sa.String(length=512), nullable=False),
         sa.Column('id', sa.BigInteger(), nullable=False),
         sa.Column('vk_id', sa.BigInteger(), nullable=False),
         sa.Column('cat', sa.String(length=255), nullable=False),
