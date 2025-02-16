@@ -1,17 +1,17 @@
-from typing import Type, Optional, Sequence
+from typing import Optional, Sequence, Type
 
-from sqlalchemy import exists, select
+from sqlalchemy import delete, exists, select
 from sqlalchemy.orm import Session
 
 from duty.database.models import (
-    UserTemplate,
     UserAnimTemplate,
+    UserTemplate,
     UserVoiceTemplate,
 )
 from duty.database.repository.template.base import (
+    BaseUserTemplateRepository,
     Existence,
     TemplateType,
-    BaseUserTemplateRepository,
 )
 
 
@@ -66,14 +66,23 @@ class BaseSqlTemplateRepository(BaseUserTemplateRepository[TemplateType]):
 
         return Existence.EXIST if name_exists else Existence.NOT_EXIST
 
+    def delete(self, name: str):
+        stmt = (
+            delete(self.__template_type__)
+                .where(self.__template_type__.vk_id == self.vk_id)
+                .where(self.__template_type__.name == name)
+        )
+        result = self._session.execute(stmt)
+        return Existence.EXIST if result.rowcount else Existence.NOT_EXIST
 
-class UserTemplateRepository(BaseSqlTemplateRepository[UserTemplate]):
+
+class SqlUserTemplateRepository(BaseSqlTemplateRepository[UserTemplate]):
     __template_type__ = UserTemplate
 
 
-class UserVoiceTemplateRepository(BaseSqlTemplateRepository[UserVoiceTemplate]):
+class SqlUserVoiceTemplateRepository(BaseSqlTemplateRepository[UserVoiceTemplate]):
     __template_type__ = UserVoiceTemplate
 
 
-class UserAnimTemplateRepository(BaseSqlTemplateRepository[UserAnimTemplate]):
+class SqlUserAnimTemplateRepository(BaseSqlTemplateRepository[UserAnimTemplate]):
     __template_type__ = UserAnimTemplate
