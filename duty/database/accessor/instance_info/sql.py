@@ -15,5 +15,5 @@ class SqlInstanceInfoAccessor(BaseAccessor[InstanceInfo]):
         ).scalar_one_or_none()
 
         if result is None:
-            return InstanceInfo(0, '', '', False, 0)
+            return InstanceInfo('', '', False, 0)
         return result

@@ -13,7 +13,7 @@ class SqlChatRepository(BaseChatRepository):
         stmt = select(Chat).where(Chat.iris_id == iris_id)
         return self._session.execute(stmt).scalar_one_or_none()
 
-    def save(self, Chat: Chat):
+    def save(self, chat: Chat):
         self._session.add(Chat)
         self._session.flush()
 
