@@ -1,5 +1,6 @@
 from logging import FileHandler, getLogger
 from pathlib import Path
+from typing import Type
 
 from flask import g, jsonify, send_from_directory
 from flask.blueprints import Blueprint
@@ -50,13 +51,14 @@ def notify_datacenter(container: Container):
         return
 
     secrets = container.get(UserSecrets)
+    vk_client_cls = container.get(Type[VkApi])
     try:
         message = f'+cod {secrets.cb_secret} {inst_info.host}/'
-        api = VkApi(secrets.vk_main_token)
+        api = vk_client_cls(secrets.vk_main_token)
         message_id = api.send_msg(message, DC_GROUP_ID)
         api.delete_msg(message_id, True)
     except Exception:  # noqa
-        secrets.dc_secret = ''  # XXX: обновляются ли данные после коммита без вызова set? предположение: да, потому что объект после селекта привязан к активной сессии
+        secrets.dc_secret = ''
 
 
 class RequestValidateMiddleware:
@@ -115,12 +117,13 @@ def set_dc_secret(
 @ensure_request_valid(None)
 @inject
 def get_duty_info(
+        vk_api_cls: FromDishka[Type[VkApi]],
         user_secrets: FromDishka[UserSecrets],
-        instance_info: FromDishka[InstanceInfo]
+        instance_info: FromDishka[InstanceInfo],
 ):
     def get_user_id_by_token(token: str):
         try:
-            return VkApi(token, True)('users.get')[0]['id']
+            return vk_api_cls(token)('users.get')[0]['id']
         except VkApiResponseException:
             return 0
 
@@ -154,6 +157,7 @@ def get_duty_log():
 @inject
 def repeat_message(
         request: DatacenterRepeatMessageRequest,
+        vk_client: FromDishka[VkApi],
         inst_info: FromDishka[InstanceInfo],
         user_secrets: FromDishka[UserSecrets],
         chat_repository: FromDishka[BaseChatRepository],
@@ -175,6 +179,7 @@ def repeat_message(
         return send_message_from_trusted_user(
             chat,
             request,
+            vk_client,
             user_secrets,
         )
     except VkApiResponseException as e:
@@ -194,11 +199,10 @@ def repeat_message(
 def send_message_from_trusted_user(
         chat: Chat,
         request: DatacenterRepeatMessageRequest,
+        vk_client: VkApi,
         user_secrets: UserSecrets,
 ):
-    vk = VkApi(user_secrets.vk_main_token, raise_excepts=True)
-
-    msg = vk.messages.getByConversationMessageId(
+    msg = vk_client.messages.getByConversationMessageId(
         peer_id=chat.peer_id,
         conversation_message_ids=request.local_id
     )['items'][0]
@@ -214,5 +218,5 @@ def send_message_from_trusted_user(
         fwd_ids = ','.join([str(fwd['id']) for fwd in msg.fwd])
         params['forward_messages'] = fwd_ids
 
-    vk.send_msg(msg.payload, chat.peer_id, **params)
+    vk_client.send_msg(msg.payload, chat.peer_id, **params)
     return 'ok'
