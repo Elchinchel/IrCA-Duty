@@ -7,20 +7,6 @@ from werkzeug.exceptions import BadRequest
 from duty.vk import VkApi, VkApiResponseException
 
 
-def att_parse(attachments):
-    atts = []
-    if attachments:
-        for i in attachments:
-            att_t = i['type']
-            if att_t in ('link', 'article'):
-                continue
-            atts.append(att_t + str(i[att_t]['owner_id']) +
-                        '_' + str(i[att_t]['id']))
-            if i[att_t].get('access_key'):
-                atts[-1] += '_' + i[att_t]['access_key']
-    return atts
-
-
 def find_mention(text: str) -> Union[int, None]:
     for match in re.findall(r'\[(id|public|club)(\d*)\|', text):
         obj_id = int(match[1])

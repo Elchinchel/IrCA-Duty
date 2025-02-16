@@ -1,10 +1,13 @@
 from functools import cached_property
-from typing import Any, Dict, List, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Union
 
 import requests
 
-from duty.utils.parse import att_parse
-from duty.vk import VkApi
+
+if TYPE_CHECKING:
+    from duty.vk import VkApi
+else:
+    VkApi = ...
 
 
 class ProxyObject:
@@ -113,6 +116,20 @@ class VkConversation:
 
     def get_history(self) -> List[VkMessage]:
         return []
+
+
+def att_parse(attachments):
+    atts = []
+    if attachments:
+        for i in attachments:
+            att_t = i['type']
+            if att_t in ('link', 'article'):
+                continue
+            atts.append(att_t + str(i[att_t]['owner_id']) +
+                        '_' + str(i[att_t]['id']))
+            if i[att_t].get('access_key'):
+                atts[-1] += '_' + i[att_t]['access_key']
+    return atts
 
 
 def get_last_th_msgs(peer_id: int, api: VkApi) -> List[dict]:

@@ -1,10 +1,10 @@
 import os
-import random
 from functools import lru_cache, partial
 from inspect import Parameter, signature
 from pathlib import Path
 from typing import (
     Any,
+    Callable,
     Dict,
     Generic,
     ItemsView,
@@ -23,6 +23,7 @@ ROOT_DIR = Path(__file__).parent.parent.parent
 
 _KT = TypeVar('_KT')
 _VT = TypeVar('_VT')
+_RT = TypeVar('_RT')
 
 
 class UnrewritableMapping(Generic[_KT, _VT]):
@@ -49,18 +50,6 @@ class UnrewritableMapping(Generic[_KT, _VT]):
 
     def items(self) -> ItemsView[_KT, _VT]:
         return self._map.items()
-
-
-def gen_secret(
-        chars: str = 'abcdefghijklmnopqrstuvwxyz0123456789',
-        length: 'int | None' = None
-):
-    rnd = random.SystemRandom()
-    secret = ''
-    length = length or rnd.randint(64, 128)
-    while len(secret) < length:
-        secret += chars[rnd.randint(0, len(chars)-1)]
-    return secret
 
 
 def get_index(item: Sequence, index: int, default: Any = None):
@@ -90,3 +79,7 @@ def fill_kw_only_params(func, data: Dict[str, Any]):
         func,
         **{name: data['name'] for name in get_func_kwarg_names(func)}
     )
+
+
+def cast_no_args(func: Callable[..., _RT]) -> Callable[[], _RT]:
+    return func
