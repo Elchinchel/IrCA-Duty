@@ -23,9 +23,6 @@ class User(Base):
 
     vk_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
 
-    host: Mapped[str] = mapped_column(String(2048), default='')
-    installed: Mapped[bool] = mapped_column(Boolean(), default=False)
-
     trusted_users: Mapped[List['TrustedUser']] = relationship(
         cascade='save-update, delete, delete-orphan',
         lazy='select',
