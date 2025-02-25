@@ -9,7 +9,7 @@ ENV PATH="/app/venv/bin:$PATH"
 
 WORKDIR /app/icad/
 
-RUN pip install "pytest>7.2.0"
+RUN pip install "pytest>7.2.0" "dukpy>=0.5.0"
 
 COPY requirements.txt ./
 RUN pip install -r requirements.txt

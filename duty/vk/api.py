@@ -29,14 +29,16 @@ class VkApi:
     query: str
 
     def __init__(self, access_token: str, version: str = "5.130"):
-        self.query = f'?v={version}&access_token={access_token}&lang=ru'
+        self.query = f'?v={version}&lang=ru'
         self.subject = None
+        self.access_token = access_token
 
     def __call__(self, method, **kwargs) -> Any:
         if logger.level < logging.INFO:
-            logger.debug(f'URL = "{self.url}{method}" Data = {kwargs}')
+            logger.debug(f'URL = "{self.url}{method}{self.query}" Data = {kwargs}')
 
-        resp = requests.post(f'{self.url}{method}{self.query}', data=kwargs)
+        url = f'{self.url}{method}{self.query}&access_token={self.access_token}'
+        resp = requests.post(url, data=kwargs)
         if resp.status_code == 200:
             resp = resp.json()
 

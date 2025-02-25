@@ -14,6 +14,10 @@ class ProxyObject:
     def __init__(self, obj: Dict[str, Any]) -> None:
         self._obj = obj
 
+    def __repr__(self) -> str:
+        cls = type(self).__name__
+        return f'{cls}({self._obj})'
+
     def __getitem__(self, __name: str):
         return self._obj[__name]
 
@@ -39,12 +43,9 @@ class VkSubject(ProxyObject):
     @property
     def name(self) -> str:
         if self.is_group:
-            return self.data['name']
+            return self._obj['name']
         else:
             return f"{self.first_name} {self.last_name}"
-
-    def __init__(self, obj: dict) -> None:
-        self.data = obj
 
     def push(self, name: 'str | None' = None):
         if name is None:
@@ -67,9 +68,9 @@ class VkSubject(ProxyObject):
         code = 'return {"user": API.users.get(), "group": API.groups.getById()};'
         resp = api('execute', code=code)
         if resp['user']:
-            return cls(resp['user'])
+            return cls(resp['user'][0])
         if resp['group']:
-            return cls(resp['group'])
+            return cls(resp['group'][0])
         raise ValueError('Unexpected response: %r' % resp)
 
 
