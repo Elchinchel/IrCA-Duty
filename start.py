@@ -1,30 +1,46 @@
 import logging.config
 import logging.handlers
 import os
+import sys
 
-from duty import config, create_app
+from duty import config
+from duty.app import create_app
 from duty.utils.misc import ROOT_DIR
 
 
 def configure_logging():
-    is_dev_env = (os.getenv('FLASK_ENV') == 'development')
-    log_level = config.load_from_env().log_level
+    for hdlr in logging.root.handlers:
+        # if handler added by duty.utils.gunicorn.Logger
+        if getattr(hdlr, '__from_gunicorn_logger__', False):
+            logging.root.removeHandler(hdlr)
+            break
 
-    log_dir = ROOT_DIR / 'logs'
-    os.makedirs(log_dir, exist_ok=True)
+    if logging.root.handlers:
+        return
 
-    handlers: list = [
-        logging.handlers.RotatingFileHandler(
-            log_dir / 'duty.log',
-            backupCount=1,
-            maxBytes=8 * 1024 * 1024,
+    cfg = config.load_from_env()
+    log_level = cfg.log_level
+
+    log_file = cfg.log_file
+    if log_file is None:
+        log_dir = ROOT_DIR / 'logs'
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = log_dir / 'duty.log'
+
+    handlers = []
+    if log_file:
+        handlers.append(
+            logging.handlers.RotatingFileHandler(
+                log_file,
+                backupCount=1,
+                maxBytes=8 * 1024 * 1024,
+            )
         )
-    ]
-    if is_dev_env:
-        handlers.append(logging.StreamHandler())
+    if cfg.log_stdout:
+        handlers.append(logging.StreamHandler(sys.stdout))
 
     formatter = logging.Formatter(
-        '%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s',
+        '%(asctime)s.%(msecs)03d [%(levelname)s] (%(name)s) %(message)s',
         '%d.%m.%Y %H:%M:%S'
     )
 
