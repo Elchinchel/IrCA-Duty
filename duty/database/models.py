@@ -2,9 +2,15 @@ import time
 from typing import List
 
 from sqlalchemy import BigInteger, Boolean, ForeignKey, Index, String, Text
+from sqlalchemy.dialects import sqlite
 from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
 
 from duty.database.base import AsJson, Base
+
+
+# SqlAlchemy SQLite backend support autoincrement only for Integer field
+# though sqlite library save this field as 64-bit integer
+IdInteger = BigInteger().with_variant(sqlite.INTEGER(), 'sqlite')
 
 
 class InstanceInfo(Base):
@@ -15,7 +21,7 @@ class InstanceInfo(Base):
     installed: Mapped[bool]
     owner_vk_id: Mapped[int]
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, default=None)
+    id: Mapped[int] = mapped_column(IdInteger, primary_key=True, default=None)
 
 
 class User(Base):
@@ -36,7 +42,7 @@ class TrustedUser(Base):
     trusted_by_vk_id: Mapped[int] = mapped_column(ForeignKey('user.vk_id'))
     vk_id: Mapped[int] = mapped_column(BigInteger)
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, default=None)
+    id: Mapped[int] = mapped_column(IdInteger, primary_key=True, default=None)
 
 
 class UserSecrets(Base):
@@ -74,7 +80,7 @@ class UserTemplate(BaseUserTemplate, Base):
 
     payload: Mapped[str] = mapped_column(Text)
     attachments: Mapped[List[str]] = mapped_column(AsJson)
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, default=None)
+    id: Mapped[int] = mapped_column(IdInteger, primary_key=True, default=None)
 
     __table_args__ = (
         Index('ix_user_template', 'vk_id', 'name', unique=True),
@@ -85,7 +91,7 @@ class UserVoiceTemplate(BaseUserTemplate, Base):
     __tablename__ = 'user_voice_template'
 
     attachment: Mapped[str] = mapped_column(String(512))
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, default=None)
+    id: Mapped[int] = mapped_column(IdInteger, primary_key=True, default=None)
 
     __table_args__ = (
         Index('ix_user_voice_template', 'vk_id', 'name', unique=True),
@@ -97,7 +103,7 @@ class UserAnimTemplate(BaseUserTemplate, Base):
 
     speed: Mapped[float] = mapped_column()
     frames: Mapped[List[str]] = mapped_column(AsJson)
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, default=None)
+    id: Mapped[int] = mapped_column(IdInteger, primary_key=True, default=None)
 
     __table_args__ = (
         Index('ix_user_anim_template', 'vk_id', 'name', unique=True),
