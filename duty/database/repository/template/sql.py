@@ -27,26 +27,27 @@ class BaseSqlTemplateRepository(BaseUserTemplateRepository[TemplateType]):
 
         stmt = (
             select(template_cls)
-            .where(template_cls.vk_id == self.vk_id)
-            .where(template_cls.name == name)
+                .where(template_cls.vk_id == self.vk_id)
+                .where(template_cls.name == name)
         )
-
         return self._session.execute(stmt).scalar_one_or_none()
 
     def list(
             self,
-            count: int,
-            offset: int,
+            count: 'int | None',
+            offset: 'int | None',
             category: 'str | None',
     ) -> Sequence[TemplateType]:
         template_cls = self.__template_type__
 
         stmt = (
             select(template_cls)
-            .where(template_cls.vk_id == self.vk_id)
-            .limit(count)
-            .offset(offset)
+                .where(template_cls.vk_id == self.vk_id)
         )
+        if offset:
+            stmt = stmt.offset(offset)
+        if count:
+            stmt = stmt.limit(count)
         if category:
             stmt = stmt.where(template_cls.cat == category)
 
@@ -57,7 +58,7 @@ class BaseSqlTemplateRepository(BaseUserTemplateRepository[TemplateType]):
 
         exists_stmt = select(
             exists(template_cls.name)
-            .where(template_cls.name == data.name)
+                .where(template_cls.name == data.name)
         )
         name_exists = self._session.execute(exists_stmt).scalar_one()
 

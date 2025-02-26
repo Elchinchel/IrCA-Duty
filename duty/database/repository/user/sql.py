@@ -17,7 +17,7 @@ class SqlUserRepository(BaseUserRepository):
         stmt = select(User).where(User.vk_id == vk_id)
         return self._session.execute(stmt).scalar_one()
 
-    def save(self, user: User):
+    def set(self, user: User):
         self._session.add(user)
         self._session.flush()
 

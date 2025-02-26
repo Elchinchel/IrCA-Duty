@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Generic, TypeVar, Optional, Sequence
+from typing import Generic, Optional, Sequence, TypeVar
 
 from duty.database.models import BaseUserTemplate
 
@@ -21,8 +21,8 @@ class BaseUserTemplateRepository(ABC, Generic[TemplateType]):
     @abstractmethod
     def list(
             self,
-            count: int,
-            offset: int,
+            count: Optional[int],
+            offset: Optional[int],
             category: Optional[str],
     ) -> Sequence[TemplateType]:
         raise NotImplementedError

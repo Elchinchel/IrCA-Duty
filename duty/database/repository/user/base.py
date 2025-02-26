@@ -14,7 +14,7 @@ class BaseUserRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def save(self, user: User):
+    def set(self, user: User):
         raise NotImplementedError
 
     @abstractmethod
