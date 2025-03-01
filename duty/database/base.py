@@ -13,7 +13,7 @@ class AsJson(TypeDecorator[Text]):
     cache_ok = False
 
     def process_bind_param(self, value, dialect):
-        return json.dumps(value)
+        return json.dumps(value, ensure_ascii=False)
 
     def process_result_value(self, value, dialect):
         if not isinstance(value, str):

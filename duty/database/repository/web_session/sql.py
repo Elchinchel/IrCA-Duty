@@ -21,4 +21,6 @@ class SqlWebSessionRepository(BaseWebSessionRepository):
         stmt = delete(WebSession).where(WebSession.token == token)
         return self._session.execute(stmt)
 
-
+    def cleanup_old(self, expiration_time: int):
+        stmt = delete(WebSession).where(WebSession.create_time < expiration_time)
+        return self._session.execute(stmt)

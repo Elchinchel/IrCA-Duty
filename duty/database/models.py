@@ -1,4 +1,4 @@
-import time
+from datetime import datetime, timezone
 from typing import List
 
 from sqlalchemy import BigInteger, Boolean, ForeignKey, Index, String, Text
@@ -115,5 +115,5 @@ class WebSession(Base):
 
     token: Mapped[str] = mapped_column(String(512), primary_key=True)
     create_time: Mapped[int] = mapped_column(
-        default_factory=lambda: int(time.time())
+        default_factory=lambda: int(datetime.now(timezone.utc).timestamp())
     )

@@ -16,3 +16,7 @@ class BaseWebSessionRepository(ABC):
     @abstractmethod
     def delete(self, token: str):
         raise NotImplementedError
+
+    @abstractmethod
+    def cleanup_old(self, expiration_time: int):
+        raise NotImplementedError
