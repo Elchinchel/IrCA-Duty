@@ -19,6 +19,10 @@ class BaseUserTemplateRepository(ABC, Generic[TemplateType]):
         raise NotImplementedError
 
     @abstractmethod
+    def get_by_id(self, ident: int) -> Optional[TemplateType]:
+        raise NotImplementedError
+
+    @abstractmethod
     def list(
             self,
             count: Optional[int],

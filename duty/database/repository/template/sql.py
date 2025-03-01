@@ -32,6 +32,16 @@ class BaseSqlTemplateRepository(BaseUserTemplateRepository[TemplateType]):
         )
         return self._session.execute(stmt).scalar_one_or_none()
 
+    def get_by_id(self, ident: int) -> TemplateType | None:
+        template_cls = self.__template_type__
+
+        stmt = (
+            select(template_cls)
+                .where(template_cls.vk_id == self.vk_id)
+                .where(template_cls.id == ident)  # pyright: ignore
+        )
+        return self._session.execute(stmt).scalar_one_or_none()
+
     def list(
             self,
             count: 'int | None',
