@@ -1,0 +1,10 @@
+services:
+  ircatest:
+    build:
+      context: .
+      dockerfile: test.Dockerfile
+    volumes:
+      - type: "bind"
+        source: ".test_result"
+        target: "/app/icad/.test_result"
+    command: ["--cov=duty", "--cov-report=lcov:.test_result/cov.lcov"]
