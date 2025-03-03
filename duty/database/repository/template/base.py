@@ -13,6 +13,12 @@ class Existence(Enum):
     NOT_EXIST = 'not_exist'
 
 
+class SaveResult(Enum):
+    EXIST = 'exist'
+    NOT_EXIST = 'not_exist'
+    DUPLICATE = 'duplicate'
+
+
 class BaseUserTemplateRepository(ABC, Generic[TemplateType]):
     @abstractmethod
     def get(self, name: str) -> Optional[TemplateType]:
@@ -32,7 +38,7 @@ class BaseUserTemplateRepository(ABC, Generic[TemplateType]):
         raise NotImplementedError
 
     @abstractmethod
-    def save(self, data: TemplateType) -> Existence:
+    def save(self, data: TemplateType) -> SaveResult:
         raise NotImplementedError
 
     @abstractmethod

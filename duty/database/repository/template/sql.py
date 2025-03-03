@@ -1,6 +1,6 @@
 from typing import Optional, Sequence, Type
 
-from sqlalchemy import delete, exists, select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from duty.database.models import (
@@ -11,6 +11,7 @@ from duty.database.models import (
 from duty.database.repository.template.base import (
     BaseUserTemplateRepository,
     Existence,
+    SaveResult,
     TemplateType,
 )
 
@@ -38,7 +39,7 @@ class BaseSqlTemplateRepository(BaseUserTemplateRepository[TemplateType]):
         stmt = (
             select(template_cls)
                 .where(template_cls.vk_id == self.vk_id)
-                .where(template_cls.id == ident)  # pyright: ignore
+                .where(template_cls.id == ident)
         )
         return self._session.execute(stmt).scalar_one_or_none()
 
@@ -66,16 +67,20 @@ class BaseSqlTemplateRepository(BaseUserTemplateRepository[TemplateType]):
     def save(self, data: TemplateType):
         template_cls = self.__template_type__
 
-        exists_stmt = select(
-            exists(template_cls.name)
+        exists_stmt = (
+            select(template_cls.id)
                 .where(template_cls.name == data.name)
         )
-        name_exists = self._session.execute(exists_stmt).scalar_one()
+        existent_id = self._session.execute(exists_stmt).scalar_one_or_none()
+        exists = existent_id is not None
+
+        if exists and data.id != existent_id:
+            return SaveResult.DUPLICATE
 
         self._session.add(data)
         self._session.flush()
 
-        return Existence.EXIST if name_exists else Existence.NOT_EXIST
+        return SaveResult.EXIST if exists else SaveResult.NOT_EXIST
 
     def delete(self, name: str):
         stmt = (
