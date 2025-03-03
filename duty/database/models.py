@@ -1,16 +1,20 @@
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Protocol
 
 from sqlalchemy import BigInteger, Boolean, ForeignKey, Index, String, Text
 from sqlalchemy.dialects import sqlite
-from sqlalchemy.orm import Mapped, MappedAsDataclass, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from duty.database.base import AsJson, Base
+from duty.database.sqlite import NOCASE_COLLATION
 
+
+MAX_NAME_LEN = 255
 
 # SqlAlchemy SQLite backend support autoincrement only for Integer field
 # though sqlite library save this field as 64-bit integer
 IdInteger = BigInteger().with_variant(sqlite.INTEGER(), 'sqlite')
+NameString = String(MAX_NAME_LEN, collation=NOCASE_COLLATION)
 
 
 class InstanceInfo(Base):
@@ -69,41 +73,51 @@ class Chat(Base):
     installed: Mapped[bool] = mapped_column(Boolean(), default=False)
 
 
-class BaseUserTemplate(MappedAsDataclass):
-    vk_id: Mapped[int] = mapped_column(BigInteger)
-    cat: Mapped[str] = mapped_column(String(255))
-    name: Mapped[str] = mapped_column(String(255))  # XXX ограничить при сейве
+class BaseUserTemplate(Protocol):
+    id: Mapped[int]
+    vk_id: Mapped[int]
+    cat: Mapped[str]
+    name: Mapped[str]
 
 
-class UserTemplate(BaseUserTemplate, Base):
+class UserTemplate(Base):
     __tablename__ = 'user_template'
 
+    vk_id: Mapped[int] = mapped_column(BigInteger)
+    cat: Mapped[str] = mapped_column(NameString)
+    name: Mapped[str] = mapped_column(NameString)
     payload: Mapped[str] = mapped_column(Text)
     attachments: Mapped[List[str]] = mapped_column(AsJson)
-    id: Mapped[int] = mapped_column(IdInteger, primary_key=True, default=None)
+    id: Mapped[int] = mapped_column(IdInteger, primary_key=True, init=False)
 
     __table_args__ = (
         Index('ix_user_template', 'vk_id', 'name', unique=True),
     )
 
 
-class UserVoiceTemplate(BaseUserTemplate, Base):
+class UserVoiceTemplate(Base):
     __tablename__ = 'user_voice_template'
 
+    vk_id: Mapped[int] = mapped_column(BigInteger)
+    cat: Mapped[str] = mapped_column(NameString)
+    name: Mapped[str] = mapped_column(NameString)
     attachment: Mapped[str] = mapped_column(String(512))
-    id: Mapped[int] = mapped_column(IdInteger, primary_key=True, default=None)
+    id: Mapped[int] = mapped_column(IdInteger, primary_key=True, init=False)
 
     __table_args__ = (
         Index('ix_user_voice_template', 'vk_id', 'name', unique=True),
     )
 
 
-class UserAnimTemplate(BaseUserTemplate, Base):
+class UserAnimTemplate(Base):
     __tablename__ = 'user_anim_template'
 
+    vk_id: Mapped[int] = mapped_column(BigInteger)
+    cat: Mapped[str] = mapped_column(NameString)
+    name: Mapped[str] = mapped_column(NameString)
     speed: Mapped[float] = mapped_column()
     frames: Mapped[List[str]] = mapped_column(AsJson)
-    id: Mapped[int] = mapped_column(IdInteger, primary_key=True, default=None)
+    id: Mapped[int] = mapped_column(IdInteger, primary_key=True, init=False)
 
     __table_args__ = (
         Index('ix_user_anim_template', 'vk_id', 'name', unique=True),

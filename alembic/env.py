@@ -3,6 +3,7 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
+from duty.database.sqlite import setup_collate_function
 
 
 config = context.config
@@ -28,6 +29,8 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        setup_collate_function(connection)
+
         context.configure(
             connection=connection, target_metadata=target_metadata
         )
