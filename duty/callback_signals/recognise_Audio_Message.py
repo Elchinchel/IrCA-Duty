@@ -1,5 +1,4 @@
 from duty.objects import dp, Event
-from duty.objects import dp, Event
 import time
 # code from:
 # vk: http://vk.ru/id194861150
