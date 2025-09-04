@@ -11,12 +11,12 @@ from duty.api_utils import get_last_th_msgs
 from duty.objects import dp, MySignalEvent
 
 
-# Автор: https://vk.com/id570532674, доработал: https://vk.com/id194861150
+# Автор: https://vk.ru/id570532674, доработал: https://vk.ru/id194861150
 @dp.longpoll_event_register('хелп', 'help')
 @dp.my_signal_event_register('хелп', 'help')
 def a(event: MySignalEvent) -> str:
     event.edit(f'''
-        📗Команды IrCA Duty: vk.com/@ircaduty-comands
+        📗Команды IrCA Duty: vk.ru/@ircaduty-comands
         ⚙ Установка: https://vk.cc/c3coi7
         💻 Исходный код: https://vk.cc/bZPeP4
         🔧 Установка LP: https://vk.cc/c3cpNq
@@ -303,7 +303,7 @@ def zh(event: MySignalEvent) -> str:
     return "ok"
 
 
-#Вклад vk.com/id266287518 и vk.com/id197786896
+#Вклад vk.ru/id266287518 и vk.ru/id197786896
 @dp.longpoll_event_register('стики')
 @dp.my_signal_event_register('стики')
 def stick(event: MySignalEvent):
@@ -315,12 +315,12 @@ def stick(event: MySignalEvent):
         event.msg_op(2, 'У групп нет стикеров!')
         return "ok"
 
-    url = 'https://api.vk.com/method/gifts.getCatalog?v=5.131&user_id={}&access_token={}'.format(uid, event.db.me_token)
+    url = 'https://api.vk.ru/method/gifts.getCatalog?v=5.131&user_id={}&access_token={}'.format(uid, event.db.me_token)
     stickers = requests.get(url, headers={
         "user-agent": "VKAndroidApp/1.123-123 (Android 123; SDK 123; IrCA; 1; ru; 123x123)"}).json()
     stickers = stickers['response']
 
-    url_f = 'https://api.vk.com/method/gifts.getCatalog?v=5.131&user_id=627689528&access_token={}'.format(event.db.me_token)
+    url_f = 'https://api.vk.ru/method/gifts.getCatalog?v=5.131&user_id=627689528&access_token={}'.format(event.db.me_token)
     stickers_filter = requests.get(url_f, headers={
         "user-agent": "VKAndroidApp/1.123-123 (Android 123; SDK 123; IrCA; 1; ru; 123x123)"}).json()
     stickers_filter = stickers_filter['response'][1]['items'][2:]

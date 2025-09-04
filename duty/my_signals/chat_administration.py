@@ -4,7 +4,7 @@ from duty.objects import dp, MySignalEvent
 from microvk import VkApiResponseException
 
 # code from:
-# vk: http://vk.com/id194861150
+# vk: http://vk.ru/id194861150
 # github: https://github.com/Alex1249
 
 @dp.longpoll_event_register('добавить')

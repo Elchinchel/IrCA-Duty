@@ -1,7 +1,8 @@
 from duty.objects import dp, Event
+from duty.objects import dp, Event
 import time
 # code from:
-# vk: http://vk.com/id194861150
+# vk: http://vk.ru/id194861150
 # github: https://github.com/Alex1249
 @dp.event_register('messages.recogniseAudioMessage')
 def messages_recognise_Audio_Message(event: Event) -> str:

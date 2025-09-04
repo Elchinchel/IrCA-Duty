@@ -81,9 +81,9 @@ def get_delay(text):
 
 
 def find_user_by_link(text: str, vk: VkApi) -> typing.Union[int, None]:
-    user = re.findall(r"vk.com\/(club\d*|[^ \n]*\b)", text)
+    user = re.findall(r"vk.ru\/(club\d*|[^ \n]*\b)", text)
     if user is []:
-        user = re.findall(r"vk.com\/(public\d*|[^ \n]*\b)", text)
+        user = re.findall(r"vk.ru\/(public\d*|[^ \n]*\b)", text)
     if user:
         try:
             return vk('groups.getById', group_ids=user)[0]['id']

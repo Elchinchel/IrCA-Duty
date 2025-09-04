@@ -23,7 +23,7 @@ class VkApiResponseException(Exception):
 
 
 class VkApi:
-    url: str = 'https://api.vk.com/method/'
+    url: str = 'https://api.vk.ru/method/'
     query: str
     raise_excepts: bool
 
