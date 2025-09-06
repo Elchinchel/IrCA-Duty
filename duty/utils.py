@@ -95,7 +95,7 @@ def find_user_mention(text: str) -> Union[int, None]:
 
 
 def find_user_by_link(text: str, vk: VkApi) -> Union[int, None]:
-    user = re.findall(r"vk.com\/(id\d*|[^ \n]*\b)", text)
+    user = re.findall(r"vk.ru\/(id\d*|[^ \n]*\b)", text)
     if user:
         try:
             return vk('users.get', user_ids=user)[0]['id']

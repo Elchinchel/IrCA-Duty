@@ -38,7 +38,7 @@ class ReturnResponse(Exception):
 
 def make_oauth_request(**params):
     return me_data['session'].get(
-        'https://oauth.vk.com/token?' +
+        'https://oauth.vk.ru/token?' +
         urlencode([
             ('client_secret', 'qVxWRF1CwHERuIrKBnqe'),
             ('grant_type', 'password'),
@@ -54,7 +54,7 @@ def make_oauth_request(**params):
 def make_oauth_validation(**params):
     params['v'] = '5.130'
     return me_data['session'].get(
-        f'https://api.vk.com/method/auth.validatePhone?{urlencode(params)}'
+        f'https://api.vk.ru/method/auth.validatePhone?{urlencode(params)}'
     ).json()
 
 

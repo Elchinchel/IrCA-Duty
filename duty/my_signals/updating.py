@@ -59,7 +59,7 @@ import os
 import requests
 import subprocess
 def edit(text):
-    requests.post(f'https://api.vk.com/method/messages.edit?v=5.100&lang=ru&access_token='+'%s',
+    requests.post(f'https://api.vk.ru/method/messages.edit?v=5.100&lang=ru&access_token='+'%s',
                   data = {'message_id': %s, 'message': text, 'peer_id': %s})
 commands = [
     'git fetch --all',

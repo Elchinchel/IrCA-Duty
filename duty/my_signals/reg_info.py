@@ -18,7 +18,7 @@ def reg_info(event: MySignalEvent) -> str:
 
 
 def regday(uid):
-    url = 'https://vk.com/foaf.php?id=' + str(uid)
+    url = 'https://vk.ru/foaf.php?id=' + str(uid)
     response = requests.get(url).text
     num = response.find('<ya:created')
     text = response[(num + 21):(num + 46)]
