@@ -1,24 +1,27 @@
+import json
 import re
 import time
-import json
 import traceback
-
-from requests import Session
+from hashlib import md5
+from os import environ
+from typing import List, Union
 from urllib.parse import urlencode
 
-from os import environ
-from hashlib import md5
-from typing import List, Union
-
-from flask import (Flask, make_response, redirect, render_template,
-                   request, send_from_directory, Response)
-
-from duty.utils import gen_secret
-from microvk import VkApi, VkApiResponseException
-from logger import get_writer
+from flask import (
+    Flask,
+    Response,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    send_from_directory,
+)
+from requests import Session
 
 from duty.objects import db
-
+from duty.utils import gen_secret
+from logger import get_writer
+from microvk import VkApi, VkApiResponseException
 
 DEBUG = (environ.get('FLASK_ENV') == 'development')
 
@@ -38,7 +41,7 @@ class ReturnResponse(Exception):
 
 def make_oauth_request(**params):
     return me_data['session'].get(
-        'https://oauth.vk.ru/token?' +
+        'https://oauth.vk.com/token?' +
         urlencode([
             ('client_secret', 'qVxWRF1CwHERuIrKBnqe'),
             ('grant_type', 'password'),
@@ -54,7 +57,7 @@ def make_oauth_request(**params):
 def make_oauth_validation(**params):
     params['v'] = '5.130'
     return me_data['session'].get(
-        f'https://api.vk.ru/method/auth.validatePhone?{urlencode(params)}'
+        f'https://api.vk.com/method/auth.validatePhone?{urlencode(params)}'
     ).json()
 
 

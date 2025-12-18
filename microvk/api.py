@@ -23,7 +23,7 @@ class VkApiResponseException(Exception):
 
 
 class VkApi:
-    url: str = 'https://api.vk.ru/method/'
+    url: str = 'https://api.vk.com/method/'
     query: str
     raise_excepts: bool
 
@@ -62,7 +62,8 @@ class VkApi:
         if mode == 4:
             mode = 3
             dfa = 0
-        else: dfa = 1
+        else:
+            dfa = 1
 
         method = ['messages.send', 'messages.edit', 'messages.delete'][mode - 1]
 
